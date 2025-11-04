@@ -1071,3 +1071,8 @@ h1 {
     color: #ccc;
     font-size: 0.9rem;
 }
+
+.upload-container h3 {
+  margin-bottom: 15px; /* 👈 define o espaçamento entre o título e os botões */
+}
+
