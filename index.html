@@ -1,84 +1,197 @@
 <!DOCTYPE html>
 <html lang="pt-BR">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Análise de Desempenho</title>
-  <link rel="stylesheet" href="style.css">
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.4.1/papaparse.min.js"></script>
-  <script defer src="script.js"></script>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Análise de desempenho</title>
+    
+    <link rel="stylesheet" href="style.css">
+    
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.4.1/papaparse.min.js"></script>
+    
 </head>
-
 <body>
-  <header class="main-header">
-    <h1>📊 Painel de Desempenho</h1>
-    <p>Visualize e analise os dados de clientes, colaboradores e tarefas.</p>
-  </header>
+    <header>
+        <h1>Análise de desempenho</h1>
+    </header>
 
-  <!-- =======================
-       ÁREA DOS FILTROS (opcional)
-  ======================= -->
-  <section id="filters-section">
-    <div class="filters">
-      <select id="filter-unidade" class="filter-select">
-        <option value="">Filtrar por unidade</option>
-      </select>
+    <main class="container">
+        <div class="search-container">
+            <label for="search-input" class="search-label">
+                Filtrar por Nome, Cargo, Departamento, Unidade ou Competência
+            </label>
 
-      <select id="filter-departamento" class="filter-select">
-        <option value="">Filtrar por departamento</option>
-      </select>
+            <input 
+                type="text" 
+                id="search-input" 
+                placeholder="Digite para buscar..." 
+                list="autocomplete-list">
 
-      <select id="filter-gerente" class="filter-select">
-        <option value="">Filtrar por gerente</option>
-      </select>
+            <datalist id="autocomplete-list"></datalist>
 
-      <input type="text" id="search-input" placeholder="Buscar colaborador..." class="search-input">
+            <div class="selection-filters">
+                <select id="filter-unidade" class="filter-select">
+                    <option value="">Todas as Unidades</option>
+                </select>
+                <select id="filter-departamento" class="filter-select">
+                    <option value="">Todos os Departamentos</option>
+                </select>
+                <select id="filter-competencia" class="filter-select">
+                    <option value="">Todas as Competências</option>
+                </select>
+            </div>
+        </div>
+        
+        <div id="team-grid" class="team-grid">
+            </div>
+    </main>
+
+    <div id="modal-container">
+        </div>
+
+        <div class="upload-container">
+            <h3>📊 Carregar dados</h3>
+            <div class="upload-row">
+                <label class="upload-btn">
+                    <i class="file-icon">📄</i>
+                    <span>Colaboradores</span>
+                    <input type="file" id="file-colaborador" accept=".csv" hidden>
+                </label>
+                <label class="upload-btn">
+                    <i class="file-icon">📄</i>
+                    <span>Clientes</span>
+                    <input type="file" id="file-cliente" accept=".csv" hidden>
+                </label>
+                <label class="upload-btn">
+                    <i class="file-icon">📄</i>
+                    <span>Tarefas</span>
+                    <input type="file" id="file-tarefa" accept=".csv" hidden>
+                </label>
+                <button id="btn-processar" class="processar-btn" disabled>Gerar Análise</button>
+            </div>
+
+            <!-- Barra de progresso e status -->
+            <div class="upload-progress">
+                <div class="progress-bar" id="progress-bar"></div>
+            </div>
+            <p id="upload-status" class="upload-status">Aguardando anexos...</p>
+        </div>
+
+
+
+    <!-- Sidebar para clientes -->
+    <div id="clientes-sidebar" class="clientes-sidebar">
+        <div class="clientes-sidebar-header">
+            <h3 class="clientes-sidebar-title">Clientes do Colaborador</h3>
+            <button class="fechar-clientes-btn" onclick="fecharClientesSidebar()">&times;</button>
+        </div>
+        <div id="clientes-list" class="clientes-list">
+            <!-- Clientes serão carregados aqui -->
+        </div>
     </div>
-  </section>
 
-  <!-- =======================
-       ÁREA DOS CARDS
-  ======================= -->
-  <main id="cards-container" class="cards-container">
-    <!-- Os cards são renderizados aqui dinamicamente pelo script.js -->
-  </main>
-
-  <!-- =======================
-       ÁREA DE UPLOAD (AGORA NO FINAL)
-  ======================= -->
-  <footer class="upload-section">
-    <div class="upload-container">
-      <h3>📁 Carregar planilhas para análise</h3>
-
-      <div class="upload-row">
-        <label class="upload-btn">
-          <i class="file-icon">📄</i>
-          <span>Colaboradores</span>
-          <input type="file" id="file-colaborador" accept=".csv" hidden>
-        </label>
-
-        <label class="upload-btn">
-          <i class="file-icon">📄</i>
-          <span>Clientes</span>
-          <input type="file" id="file-cliente" accept=".csv" hidden>
-        </label>
-
-        <label class="upload-btn">
-          <i class="file-icon">📄</i>
-          <span>Tarefas</span>
-          <input type="file" id="file-tarefa" accept=".csv" hidden>
-        </label>
-
-        <button id="btn-processar" class="processar-btn" disabled>Gerar Análise</button>
-      </div>
-
-      <div class="upload-progress">
-        <div class="progress-bar" id="progress-bar"></div>
-      </div>
-
-      <p id="upload-status" class="upload-status">Aguardando anexos...</p>
+    <!-- Modal de comparação com filtros verticais -->
+    <div id="comparar-modal" class="modal">
+        <div class="modal-content comparar-modal-content">
+            <span class="close-btn" onclick="fecharModalComparacao()">&times;</span>
+            <h2 style="text-align: center; margin-bottom: 30px;">Comparar Colaboradores</h2>
+            
+            <div class="comparacao-layout">
+                <!-- Coluna Esquerda: Filtros Time 1 -->
+                <div class="filtros-col filtros-time-1">
+                    <h3>Filtros</h3>
+                    <div class="filtro-vertical">
+                        <label for="filtro-unidade-1">Unidade</label>
+                        <select id="filtro-unidade-1" class="filtro-vertical-select" onchange="filtrarTime(1, 'unidade')">
+                            <option value="">Todas as Unidades</option>
+                        </select>
+                    </div>
+                    <div class="filtro-vertical">
+                        <label for="filtro-departamento-1">Departamento</label>
+                        <select id="filtro-departamento-1" class="filtro-vertical-select" onchange="filtrarTime(1, 'departamento')">
+                            <option value="">Todos os Departamentos</option>
+                        </select>
+                    </div>
+                    <div class="filtro-vertical">
+                        <label for="filtro-cargo-1">Cargo</label>
+                        <select id="filtro-cargo-1" class="filtro-vertical-select" onchange="filtrarTime(1, 'cargo')">
+                            <option value="">Todos os Cargos</option>
+                        </select>
+                    </div>
+                    <div class="filtro-vertical">
+                        <label for="filtro-competencia-1">Competência</label>
+                        <select id="filtro-competencia-1" class="filtro-vertical-select" onchange="filtrarTime(1, 'competencia')">
+                            <option value="">Todas as Competências</option>
+                        </select>
+                    </div>
+                    <div class="filtro-vertical">
+                        <label for="filtro-colaborador-1">Colaborador</label>
+                        <select id="filtro-colaborador-1" class="filtro-vertical-select" onchange="selecionarColaboradorTime(1)">
+                            <option value="">Selecionar Colaborador</option>
+                        </select>
+                    </div>
+                </div>
+                
+                <!-- Modal Time 1 -->
+                <div class="modal-col modal-time-1">
+                    <div id="modal-time-1" class="time-modal-placeholder">
+                        <div class="placeholder-text">Selecione um colaborador</div>
+                    </div>
+                </div>
+                
+                <!-- VS no meio -->
+                <div class="vs-container">
+                    <div class="vs-circle">VS</div>
+                </div>
+                
+                <!-- Modal Time 2 -->
+                <div class="modal-col modal-time-2">
+                    <div id="modal-time-2" class="time-modal-placeholder">
+                        <div class="placeholder-text">Selecione um colaborador</div>
+                    </div>
+                </div>
+                
+                <!-- Coluna Direita: Filtros Time 2 -->
+                <div class="filtros-col filtros-time-2">
+                    <h3>Filtros</h3>
+                    <div class="filtro-vertical">
+                        <label for="filtro-unidade-2">Unidade</label>
+                        <select id="filtro-unidade-2" class="filtro-vertical-select" onchange="filtrarTime(2, 'unidade')">
+                            <option value="">Todas as Unidades</option>
+                        </select>
+                    </div>
+                    <div class="filtro-vertical">
+                        <label for="filtro-departamento-2">Departamento</label>
+                        <select id="filtro-departamento-2" class="filtro-vertical-select" onchange="filtrarTime(2, 'departamento')">
+                            <option value="">Todos os Departamentos</option>
+                        </select>
+                    </div>
+                    <div class="filtro-vertical">
+                        <label for="filtro-cargo-2">Cargo</label>
+                        <select id="filtro-cargo-2" class="filtro-vertical-select" onchange="filtrarTime(2, 'cargo')">
+                            <option value="">Todos os Cargos</option>
+                        </select>
+                    </div>
+                    <div class="filtro-vertical">
+                        <label for="filtro-competencia-2">Competência</label>
+                        <select id="filtro-competencia-2" class="filtro-vertical-select" onchange="filtrarTime(2, 'competencia')">
+                            <option value="">Todas as Competências</option>
+                        </select>
+                    </div>
+                    <div class="filtro-vertical">
+                        <label for="filtro-colaborador-2">Colaborador</label>
+                        <select id="filtro-colaborador-2" class="filtro-vertical-select" onchange="selecionarColaboradorTime(2)">
+                            <option value="">Selecionar Colaborador</option>
+                        </select>
+                    </div>
+                </div>
+            </div>
+        </div>
     </div>
-  </footer>
 
+    <!-- Overlay para quando o sidebar estiver aberto -->
+    <div id="sidebar-overlay" class="sidebar-overlay" onclick="fecharClientesSidebar()"></div>
+
+    <script src="script.js"></script> 
 </body>
 </html>
