@@ -1056,61 +1056,7 @@ function renderTeamCards(data) {
     
     const cardsContainerFixo = document.createElement('div');
     cardsContainerFixo.className = 'role-cards-container';
-    
-    // Card 1 - Juan Rodrigues
-    const cardJuan = `
-        <div class="team-card" onclick="openModal('juan-rodrigues-fixo')">
-            <div class="card-header" style="background: linear-gradient(135deg, #600018, #800020);">
-                <div class="card-photo">
-                    <img src="fotos/juan_rodrigues.png" alt="Juan Rodrigues">
-                </div>
-                <div class="card-header-info">
-                    <h2>Juan Rodrigues</h2>
-                    <div class="role">Desenvolvedor</div>
-                </div>
-            </div>
-            <div class="card-content">
-                <div class="info-list">
-                    <div class="info-item">
-                        <span class="info-label">Idade</span>
-                        <span class="info-value">21</span>
-                    </div>
-                    <div class="info-item">
-                        <span class="info-label">Formação</span>
-                        <span class="info-value">Logística</span>
-                    </div>
-                </div>
-            </div>
-        </div>
-    `;
-    
-    // Card 2 - Willian Emanoel
-    const cardWillian = `
-        <div class="team-card" onclick="openModal('willian-emanoel-fixo')">
-            <div class="card-header" style="background: linear-gradient(135deg, #600018, #800020);">
-                <div class="card-photo">
-                    <img src="fotos/willian_emanoel.png" alt="Willian Emanoel">
-                </div>
-                <div class="card-header-info">
-                    <h2>Willian Emanoel</h2>
-                    <div class="role">Desenvolvedor</div>
-                </div>
-            </div>
-            <div class="card-content">
-                <div class="info-list">
-                    <div class="info-item">
-                        <span class="info-label">Idade</span>
-                        <span class="info-value">22</span>
-                    </div>
-                    <div class="info-item">
-                        <span class="info-label">Formação</span>
-                        <span class="info-value">Sistemas</span>
-                    </div>
-                </div>
-            </div>
-        </div>
-    `;
-    
+       
     cardsContainerFixo.innerHTML = cardJuan + cardWillian;
     roleSectionFixa.appendChild(cardsContainerFixo);
     grid.appendChild(roleSectionFixa);
@@ -1777,3 +1723,4 @@ document.addEventListener('DOMContentLoaded', () => {
         competenciaSelect.addEventListener('change', filterCards);
     }
 });
+
