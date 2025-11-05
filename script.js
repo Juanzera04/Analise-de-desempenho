@@ -1046,28 +1046,11 @@ function renderTeamCards(data) {
     if (!grid) return;
     grid.innerHTML = '';
 
-    data.sort((a, b) => b.STAT_3_VALOR - a.STAT_3_VALOR);    
-    // ========== CARDS FIXOS - ADICIONE ESTA SEÇÃO ==========
-    const roleSectionFixa = document.createElement('div');
-    roleSectionFixa.className = 'role-section';
-    
-    // Título para os cards fixos
-    roleSectionFixa.innerHTML = `<div class="role-header"><h2>Desenvolvedores</h2></div>`;
-    
-    const cardsContainerFixo = document.createElement('div');
-    cardsContainerFixo.className = 'role-cards-container';
-       
-    cardsContainerFixo.innerHTML = cardJuan + cardWillian;
-    roleSectionFixa.appendChild(cardsContainerFixo);
-    grid.appendChild(roleSectionFixa);
-    // ========== FIM DOS CARDS FIXOS ==========
-
+    data.sort((a, b) => b.STAT_3_VALOR - a.STAT_3_VALOR); 
     if (data.length === 0) {
         grid.innerHTML = '<p style="color: var(--dark-secondary-text); text-align: center; grid-column: 1 / -1;">Nenhum resultado encontrado.</p>';
         return;
     }
-
-
 
     // 1. Agrupar os dados por CARGO
     const groupedData = data.reduce((acc, member) => {
@@ -1214,88 +1197,6 @@ function renderModals(data) {
     const container = document.getElementById('modal-container');
     if (!container) return;
     container.innerHTML = '';
-
-    // ========== MODAIS FIXOS - ADICIONE ESTA SEÇÃO ==========
-    // Modal para Juan Rodrigues
-    const modalJuan = `
-        <div id="juan-rodrigues-fixo-modal" class="modal">
-            <div class="modal-content" id="juan-rodrigues-fixo-modal-content">
-                <span class="close-btn" onclick="closeModal('juan-rodrigues-fixo')">&times;</span>
-                <div class="employee-profile">
-                    <div class="profile-pic" style="background-color: #800020;">
-                        <img class="profile-image" src="fotos/juan_rodrigues.png" alt="Juan Rodrigues">
-                    </div>
-                    <div class="profile-info-text">
-                        <h2>Juan Rodrigues</h2>
-                        <div class="role">Desenvolvedor</div>
-                        <div class="profile-admissions">
-                            <span>Idade: 21 | Formação: Logística</span>
-                        </div>
-                    </div>
-                </div>
-                <div class="stats-row">
-                    <div class="stat-item">
-                        <div class="stat-title">Experiência</div>
-                        <div class="stat-value">2 anos</div>
-                    </div>
-                    <div class="stat-item">
-                        <div class="stat-title">Especialidade</div>
-                        <div class="stat-value">Análise de dados</div>
-                    </div>
-                </div>
-                    <div class="linkedin">
-                        <span>Linkedin: juanrodriguessilva</span>
-                    </div>
-                    <div class="espaço">
-                        <span> . </span>
-                    </div>
-
-            </div>
-        </div>
-    `;
-
-    // Modal para Willian Emanoel
-    const modalWillian = `
-        <div id="willian-emanoel-fixo-modal" class="modal">
-            <div class="modal-content" id="willian-emanoel-fixo-modal-content">
-                <span class="close-btn" onclick="closeModal('willian-emanoel-fixo')">&times;</span>
-                <div class="employee-profile">
-                    <div class="profile-pic" style="background-color: #800020;">
-                        <img class="profile-image" src="fotos/willian_emanoel.png" alt="Willian Emanoel">
-                    </div>
-                    <div class="profile-info-text">
-                        <h2>Willian Emanoel</h2>
-                        <div class="role">Desenvolvedor</div>
-                        <div class="profile-admissions">
-                            <span>Formado em Gestao da Tecnologia da Informação/Analise e Desenvolvimento de Sistemas</span>
-                        </div>
-                    </div>
-                </div>
-                <div class="stats-row">
-                    <div class="stat-item">
-                        <div class="stat-title">Experiência</div>
-                        <div class="stat-value">3 anos</div>
-                    </div>
-                    <div class="stat-item">
-                        <div class="stat-title">Projetos</div>
-                        <div class="stat-value">20+</div>
-                    </div>
-                    <div class="stat-item">
-                        <div class="stat-title">Especialidade</div>
-                        <div class="stat-value">Full-stack</div>
-                    </div>
-                </div>
-                <div class="modal-buttons-container">
-                    <button class="ver-clientes-btn" onclick="alert('Informações de contato: willian@empresa.com')">
-                        Contato
-                    </button>
-                </div>
-            </div>
-        </div>
-    `;
-
-    container.innerHTML = modalJuan + modalWillian;
-    // ========== FIM DOS MODAIS FIXOS ==========
 
     data.forEach(member => {
         // Usa o HEX direto do JS para o background do perfil no modal
@@ -1723,4 +1624,5 @@ document.addEventListener('DOMContentLoaded', () => {
         competenciaSelect.addEventListener('change', filterCards);
     }
 });
+
 
