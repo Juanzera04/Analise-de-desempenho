@@ -41,9 +41,9 @@
                 </select>
             </div>
         </div>
-        
+                
         <div id="team-grid" class="team-grid">
-            </div>
+        </div>
     </main>
 
     <div id="modal-container">
@@ -76,8 +76,6 @@
             </div>
             <p id="upload-status" class="upload-status">Aguardando anexos...</p>
         </div>
-
-
 
     <!-- Sidebar para clientes -->
     <div id="clientes-sidebar" class="clientes-sidebar">
@@ -129,6 +127,16 @@
                         <select id="filtro-colaborador-1" class="filtro-vertical-select" onchange="selecionarColaboradorTime(1)">
                             <option value="">Selecionar Colaborador</option>
                         </select>
+                    </div>
+                    
+                    <!-- BOTÕES DE NAVEGAÇÃO -->
+                    <div class="navegacao-setas">
+                        <button id="seta-esquerda-1" class="seta-navegacao seta-esquerda" onclick="navegarColaborador(1, 'anterior')">
+                            ‹
+                        </button>
+                        <button id="seta-direita-1" class="seta-navegacao seta-direita" onclick="navegarColaborador(1, 'proximo')">
+                            ›
+                        </button>
                     </div>
                 </div>
                 
@@ -183,6 +191,16 @@
                         <select id="filtro-colaborador-2" class="filtro-vertical-select" onchange="selecionarColaboradorTime(2)">
                             <option value="">Selecionar Colaborador</option>
                         </select>
+                    </div>
+                    
+                    <!-- BOTÕES DE NAVEGAÇÃO -->
+                    <div class="navegacao-setas">
+                        <button id="seta-esquerda-2" class="seta-navegacao seta-esquerda" onclick="navegarColaborador(2, 'anterior')">
+                            ‹
+                        </button>
+                        <button id="seta-direita-2" class="seta-navegacao seta-direita" onclick="navegarColaborador(2, 'proximo')">
+                            ›
+                        </button>
                     </div>
                 </div>
             </div>
