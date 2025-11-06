@@ -11,6 +11,10 @@ let time2Filtrados = [];
 let fileColaborador = null;
 let fileCliente = null;
 let fileTarefa = null;
+// Variável global para controlar o estado de visibilidade dos salários
+let salariosVisiveis = false;
+// Objeto para controlar o estado de cada seção
+const estadoSalariosPorSecao = {};
 
 document.getElementById('file-colaborador').addEventListener('change', (e) => {
     fileColaborador = e.target.files[0];
@@ -43,12 +47,12 @@ function carregarArquivosLocais(fileCliente, fileColaborador, fileTarefa) {
 
 // ** Mapeamento Hexadecimal Direto no JS **
 const roleStripColorMap = {
-    'Analista': '#053e89',    // Azul
-    'Coordenador(a)': '#800020', // Verde
-    'Gerente': '#800020',     // Laranja
-    'Auxiliar': '#6d9fe0',     // Roxo
-    'Assistente': '#2e69b6',  // Teal/Ciano
-    'Outros': '#444444',      // Cinza escuro para cargos não mapeados
+    'Analista': '#053e89',
+    'Auxiliar': '#6d9fe0', 
+    'Assistente': '#2e69b6', 
+    'Coordenador(a)': '#800020', 
+    'Gerente': '#800020', 
+    'Outros': '#444444',    
 };
 
 // ----------------------------------------------------------------------
@@ -113,10 +117,61 @@ function abrirCompararSidebar(memberId) {
     // Preenche todos os filtros
     preencherTodosFiltrosComparacao();
     
+    // PREENCHIMENTO AUTOMÁTICO: Define os filtros de AMBOS os times baseado no colaborador selecionado
+    preencherFiltrosAutomaticamente(1, member); // Time 1 (esquerda)
+    preencherFiltrosAutomaticamente(2, member); // Time 2 (direita) - MESMOS FILTROS
+    
     // Atualiza o time 1 com o colaborador selecionado
     selecionarColaboradorTime(1, memberId);
+    
+    // Tenta selecionar um colaborador diferente para o time 2 (se houver outros disponíveis)
+    selecionarColaboradorDiferenteParaTime2(memberId);
+}
+/**
+ * Preenche automaticamente os filtros baseado no colaborador selecionado
+ */
+function preencherFiltrosAutomaticamente(timeNum, member) {
+    // Preenche os filtros com os dados do colaborador
+    document.getElementById(`filtro-unidade-${timeNum}`).value = member.UNIDADE || '';
+    document.getElementById(`filtro-departamento-${timeNum}`).value = member.DEPARTAMENTO || '';
+    document.getElementById(`filtro-cargo-${timeNum}`).value = member.CARGO || '';
+    
+    // Aplica os filtros automaticamente
+    filtrarTime(timeNum, 'auto');
 }
 
+/**
+ * Tenta selecionar um colaborador diferente para o time 2
+ */
+function selecionarColaboradorDiferenteParaTime2(memberIdExcluir) {
+    const colaboradoresFiltradosTime2 = time2Filtrados;
+    
+    // Remove o colaborador atual da lista do time 2
+    const colaboradoresDisponiveis = colaboradoresFiltradosTime2.filter(m => 
+        !memberIdExcluir || m.ID !== memberIdExcluir
+    );
+    
+    if (colaboradoresDisponiveis.length > 0) {
+        // Ordena por faturamento (maior primeiro) e seleciona o primeiro
+        const colaboradoresOrdenados = [...colaboradoresDisponiveis].sort((a, b) => 
+            b.FATURAMENTO_TOTAL - a.FATURAMENTO_TOTAL
+        );
+        
+        const colaboradorParaTime2 = colaboradoresOrdenados[0];
+        selecionarColaboradorTime(2, colaboradorParaTime2.ID);
+    } else {
+        // Se não há outros colaboradores, mostra placeholder
+        time2Colaborador = null;
+        const modalElement = document.getElementById('modal-time-2');
+        if (modalElement) {
+            modalElement.innerHTML = '<div class="placeholder-text">Nenhum outro colaborador com os mesmos filtros</div>';
+            modalElement.className = 'time-modal-placeholder';
+        }
+        
+        // Atualiza navegação
+        atualizarNavegacaoSetas(2);
+    }
+}
 /**
  * Abre o modal de comparação
  */
@@ -227,11 +282,17 @@ function filtrarTime(timeNum, tipoFiltro) {
     // Atualiza a lista de colaboradores disponíveis
     atualizarListaColaboradoresTime(timeNum);
     
+    // Atualiza a navegação por setas
+    atualizarNavegacaoSetas(timeNum);
+    
     // Se o colaborador atual não está mais na lista filtrada, deseleciona
     const colaboradorAtual = timeNum === 1 ? time1Colaborador : time2Colaborador;
     if (colaboradorAtual && !colaboradoresFiltrados.find(m => m.ID === colaboradorAtual.ID)) {
-        if (timeNum === 1) time1Colaborador = null;
-        else time2Colaborador = null;
+        if (timeNum === 1) {
+            time1Colaborador = null;
+        } else {
+            time2Colaborador = null;
+        }
         
         const modalElement = document.getElementById(`modal-time-${timeNum}`);
         if (modalElement) {
@@ -242,10 +303,18 @@ function filtrarTime(timeNum, tipoFiltro) {
         // ATUALIZAÇÃO CRÍTICA: Re-renderiza o modal com os dados filtrados
         renderizarModalTime(timeNum, colaboradorAtual);
     }
+    
+    // SE FOR FILTRO AUTOMÁTICO DO TIME 1, ATUALIZA O TIME 2 TAMBÉM
+    if (timeNum === 1 && tipoFiltro === 'auto' && time2Colaborador) {
+        // Verifica se o colaborador do time 2 ainda está nos filtros atualizados
+        const colaboradorTime2AindaValido = colaboradoresFiltrados.find(m => m.ID === time2Colaborador.ID);
+        if (!colaboradorTime2AindaValido) {
+            // Se não está mais válido, tenta selecionar outro
+            selecionarColaboradorDiferenteParaTime2(time1Colaborador ? time1Colaborador.ID : null);
+        }
+    }
 }
-/**
- * Atualiza a lista de colaboradores disponíveis para um time
- */
+
 function atualizarListaColaboradoresTime(timeNum) {
     const select = document.getElementById(`filtro-colaborador-${timeNum}`);
     if (!select) return;
@@ -268,6 +337,67 @@ function atualizarListaColaboradoresTime(timeNum) {
     } else {
         select.value = '';
     }
+    
+    // Atualiza a navegação por setas
+    atualizarNavegacaoSetas(timeNum);
+}
+
+/**
+ * Atualiza a navegação por setas para um time
+ */
+function atualizarNavegacaoSetas(timeNum) {
+    const colaboradoresFiltrados = timeNum === 1 ? time1Filtrados : time2Filtrados;
+    const colaboradorAtual = timeNum === 1 ? time1Colaborador : time2Colaborador;
+    
+    if (!colaboradorAtual || colaboradoresFiltrados.length === 0) {
+        // Esconde as setas se não há colaborador selecionado ou lista vazia
+        const setaEsquerda = document.getElementById(`seta-esquerda-${timeNum}`);
+        const setaDireita = document.getElementById(`seta-direita-${timeNum}`);
+        if (setaEsquerda) setaEsquerda.style.visibility = 'hidden';
+        if (setaDireita) setaDireita.style.visibility = 'hidden';
+        return;
+    }
+    
+    // Encontra o índice atual do colaborador na lista filtrada
+    const currentIndex = colaboradoresFiltrados.findIndex(m => m.ID === colaboradorAtual.ID);
+    
+    // Atualiza a visibilidade das setas
+    const setaEsquerda = document.getElementById(`seta-esquerda-${timeNum}`);
+    const setaDireita = document.getElementById(`seta-direita-${timeNum}`);
+    
+    if (setaEsquerda) {
+        setaEsquerda.style.visibility = currentIndex > 0 ? 'visible' : 'hidden';
+    }
+    
+    if (setaDireita) {
+        setaDireita.style.visibility = currentIndex < colaboradoresFiltrados.length - 1 ? 'visible' : 'hidden';
+    }
+}
+
+/**
+ * Navega para o próximo ou anterior colaborador
+ */
+function navegarColaborador(timeNum, direcao) {
+    const colaboradoresFiltrados = timeNum === 1 ? time1Filtrados : time2Filtrados;
+    const colaboradorAtual = timeNum === 1 ? time1Colaborador : time2Colaborador;
+    
+    if (!colaboradorAtual || colaboradoresFiltrados.length === 0) return;
+    
+    // Encontra o índice atual
+    const currentIndex = colaboradoresFiltrados.findIndex(m => m.ID === colaboradorAtual.ID);
+    
+    let novoIndex;
+    if (direcao === 'proximo') {
+        novoIndex = currentIndex + 1;
+        if (novoIndex >= colaboradoresFiltrados.length) return; // Não permite ultrapassar o final
+    } else {
+        novoIndex = currentIndex - 1;
+        if (novoIndex < 0) return; // Não permite ir antes do início
+    }
+    
+    // Seleciona o novo colaborador
+    const novoColaborador = colaboradoresFiltrados[novoIndex];
+    selecionarColaboradorTime(timeNum, novoColaborador.ID);
 }
 
 /**
@@ -289,6 +419,9 @@ function selecionarColaboradorTime(timeNum, memberId = null) {
         // Atualiza a variável global
         if (timeNum === 1) time1Colaborador = null;
         else time2Colaborador = null;
+        
+        // Atualiza navegação
+        atualizarNavegacaoSetas(timeNum);
         return;
     }
     
@@ -302,8 +435,14 @@ function selecionarColaboradorTime(timeNum, memberId = null) {
     if (timeNum === 1) time1Colaborador = member;
     else time2Colaborador = member;
     
+    // Atualiza o select
+    select.value = selectedId;
+    
     // Renderiza o modal completo do colaborador COM DADOS FILTRADOS
     renderizarModalTime(timeNum, member);
+    
+    // Atualiza a navegação por setas
+    atualizarNavegacaoSetas(timeNum);
 }
 
 /**
@@ -354,12 +493,13 @@ function renderizarModalTime(timeNum, member) {
                 <div class="profile-pic" style="background-color: ${color};">
                     ${photoContent}
                 </div>
-                <div class="profile-info-text">
+                <div class="profile-info-text-vertical">
                     <h2>${memberComDadosFiltrados.NOME}</h2>
-                    <div class="role">${memberComDadosFiltrados.CARGO} em ${memberComDadosFiltrados.DEPARTAMENTO} (${memberComDadosFiltrados.UNIDADE && memberComDadosFiltrados.UNIDADE !== 'Não Definida' ? memberComDadosFiltrados.UNIDADE : 'N/A'})</div>
-                    
-                    <div class="profile-admissions">
-                        <span>Desde: ${memberComDadosFiltrados.DATA_ADMISSAO} | Salário: <span class="salary">R$ ${memberComDadosFiltrados.SALARIO}</span></span>
+                    <div class="profile-details-list">
+                        <div class="detail-value-only">${memberComDadosFiltrados.CARGO_CARTEIRA}</div>
+                        <div class="detail-value-only">${memberComDadosFiltrados.DEPARTAMENTO}</div>
+                        <div class="detail-value-only">Desde: ${memberComDadosFiltrados.DATA_ADMISSAO}</div>
+                        <div class="detail-value-only salary-value">Salário: R$ ${memberComDadosFiltrados.SALARIO}</div>
                     </div>
                 </div>
             </div>
@@ -413,7 +553,7 @@ function renderizarModalTime(timeNum, member) {
                             <span class="quality-percentage">${finalProgressPercentage}%</span>
                         </div>
                     </div>
-                    <p style="text-align: center; font-size: 0.8rem; color: var(--dark-secondary-text); margin-top: 10px;">${memberComDadosFiltrados.TAREFAS_COMPLETAS} Entregue no prazo / ${memberComDadosFiltrados.TAREFAS_TOTAIS} Totais</p>
+                    <p style="text-align: center; font-size: 0.8rem; color: var(--dark-secondary-text); margin-top: 10px;">${memberComDadosFiltrados.TAREFAS_CONCLUIDAS} Entregue no prazo de ${memberComDadosFiltrados.TAREFAS_TOTAIS} Totais</p>
                 </div>
             </div>
             
@@ -466,7 +606,7 @@ function calcularDadosFiltrados(member, competenciaFiltro) {
     });
 
     memberFiltrado.TAREFAS_CONCLUIDAS = tarefasFiltradas.filter(t =>
-        t.Status && String(t.Status).toLowerCase().includes('concluíd')
+        t.Status && String(t.Status).toLowerCase().includes('concluído')
     ).length;
     memberFiltrado.TAREFAS_PENDENTES = tarefasFiltradas.filter(t =>
         t.Status && String(t.Status).toLowerCase().includes('pendente')
@@ -492,7 +632,7 @@ function calcularDadosFiltrados(member, competenciaFiltro) {
 }
 
 /**
- * Abre o sidebar de clientes considerando o filtro de competência do time
+ * Abre o sidebar de clientes na comparação
  */
 function abrirClientesSidebarComparacao(memberId, timeNum) {
     const member = teamData.find(m => m.ID === memberId);
@@ -525,79 +665,286 @@ function abrirClientesSidebarComparacao(memberId, timeNum) {
             mensagem += ` com a competência "${filtroCompetencia}"`;
         }
         clientesList.innerHTML = `
-            <div class="cliente-item" style="text-align: center; color: var(--dark-secondary-text);">
-                ${mensagem}
+            <div class="clientes-main-content">
+                <div class="clientes-toggle-container">
+                    <div class="clientes-toggle-buttons">
+                        <button class="toggle-btn active" data-view="clientes">Clientes</button>
+                        <button class="toggle-btn" data-view="grupos">Grupos</button>
+                    </div>
+                </div>
+                <div class="clientes-content">
+                    <div id="clientes-view" class="clientes-view">
+                        <div class="cliente-item" style="text-align: center; color: var(--dark-secondary-text); padding: 30px;">
+                            ${mensagem}
+                        </div>
+                    </div>
+                    <div id="grupos-view" class="grupos-view" style="display: none;"></div>
+                </div>
             </div>
         `;
     } else {
-        clientesList.innerHTML = clientes.map(cliente => {
-            const faturamentoFormatado = new Intl.NumberFormat('pt-BR', {
-                style: 'currency',
-                currency: 'BRL',
-                minimumFractionDigits: 2
-            }).format(cliente.faturamento);
+        // Calcular grupos para a view de grupos
+        const gruposMap = new Map();
+        clientes.forEach(cliente => {
+            const grupo = cliente.grupo || 'Sem Grupo';
+            if (!gruposMap.has(grupo)) {
+                gruposMap.set(grupo, {
+                    nome: grupo,
+                    clientes: [],
+                    complexidades: { 'A': 0, 'B': 0, 'C': 0 },
+                    faturamentoTotal: 0
+                });
+            }
+            
+            const grupoData = gruposMap.get(grupo);
+            grupoData.clientes.push(cliente);
+            if (grupoData.complexidades[cliente.complexidade] !== undefined) {
+                grupoData.complexidades[cliente.complexidade]++;
+            }
+            grupoData.faturamentoTotal += cliente.faturamento;
+        });
 
-            return `
-                <div class="cliente-item">
-                    <div class="cliente-header">
-                        <div class="cliente-nome">${cliente.nome}</div>
-                        <div class="cliente-complexidade complexidade-${cliente.complexidade}">
-                            ${cliente.complexidade}
-                        </div>
-                    </div>
-                    <div class="cliente-details">
-                        <div class="cliente-detail">
-                            <span class="detail-label">Grupo</span>
-                            <span class="detail-value">${cliente.grupo}</span>
-                        </div>
-                        <div class="cliente-detail">
-                            <span class="detail-label">Competência</span>
-                            <span class="detail-value">${cliente.competencia}</span>
-                        </div>
-                        <div class="cliente-detail">
-                            <span class="detail-label">Faturamento</span>
-                            <span class="detail-value">${faturamentoFormatado}</span>
-                        </div>
+        const grupos = Array.from(gruposMap.values());
+
+        // Renderizar views
+        const clientesViewHTML = renderClientesViewComparacao(clientes);
+        const gruposViewHTML = renderGruposViewComparacao(grupos);
+
+        const sidebarContent = `
+            <div class="clientes-main-content">
+                <div class="clientes-toggle-container">
+                    <div class="clientes-toggle-buttons">
+                        <button class="toggle-btn active" data-view="clientes">Clientes</button>
+                        <button class="toggle-btn" data-view="grupos">Grupos</button>
                     </div>
                 </div>
-            `;
-        }).join('');
-        
-        // Adiciona contador de clientes
-        const totalClientes = clientes.length;
-        const totalFaturamento = clientes.reduce((sum, cliente) => sum + cliente.faturamento, 0);
-        const faturamentoTotalFormatado = new Intl.NumberFormat('pt-BR', {
-            style: 'currency',
-            currency: 'BRL',
-            minimumFractionDigits: 2
-        }).format(totalFaturamento);
-        
-        const resumoHTML = `
-            <div class="cliente-item" style="background-color: var(--modal-border);">
-                <div class="cliente-header">
-                    <div class="cliente-nome">RESUMO</div>
-                </div>
-                <div class="cliente-details">
-                    <div class="cliente-detail">
-                        <span class="detail-label">Total de Clientes</span>
-                        <span class="detail-value">${totalClientes}</span>
-                    </div>
-                    <div class="cliente-detail">
-                        <span class="detail-label">Faturamento Total</span>
-                        <span class="detail-value">${faturamentoTotalFormatado}</span>
-                    </div>
+                <div class="clientes-content">
+                    ${clientesViewHTML}
+                    ${gruposViewHTML}
                 </div>
             </div>
         `;
-        
-        clientesList.innerHTML = resumoHTML + clientesList.innerHTML;
+
+        clientesList.innerHTML = sidebarContent;
+
+        // Adicionar event listeners aos botões de toggle
+        setTimeout(() => {
+            const toggleButtons = clientesList.querySelectorAll('.toggle-btn');
+            const clientesView = document.getElementById('clientes-view');
+            const gruposView = document.getElementById('grupos-view');
+            
+            // Inicialmente mostrar apenas clientes
+            if (gruposView) gruposView.style.display = 'none';
+            
+            toggleButtons.forEach(btn => {
+                btn.addEventListener('click', function() {
+                    // Remover active de todos
+                    toggleButtons.forEach(b => b.classList.remove('active'));
+                    // Adicionar active ao clicado
+                    this.classList.add('active');
+                    
+                    const view = this.getAttribute('data-view');
+                    
+                    if (view === 'clientes') {
+                        if (clientesView) clientesView.style.display = 'block';
+                        if (gruposView) gruposView.style.display = 'none';
+                    } else {
+                        if (clientesView) clientesView.style.display = 'none';
+                        if (gruposView) gruposView.style.display = 'block';
+                    }
+                });
+            });
+        }, 100);
     }
 
     // Abre o sidebar
     sidebar.classList.add('visible');
     overlay.classList.add('visible');
-    
+}
 
+/**
+ * Renderiza a view de clientes para comparação
+ */
+function renderClientesViewComparacao(clientes) {
+    if (clientes.length === 0) {
+        return `
+            <div id="clientes-view" class="clientes-view">
+                <div class="cliente-item" style="text-align: center; color: var(--dark-secondary-text); padding: 30px;">
+                    Nenhum cliente encontrado
+                </div>
+            </div>
+        `;
+    }
+
+    const clientesHTML = clientes.map(cliente => {
+        const faturamentoFormatado = new Intl.NumberFormat('pt-BR', {
+            style: 'currency',
+            currency: 'BRL',
+            minimumFractionDigits: 2
+        }).format(cliente.faturamento);
+
+        return `
+            <div class="cliente-item">
+                <div class="cliente-header">
+                    <div class="cliente-nome">${cliente.nome}</div>
+                    <div class="cliente-complexidade complexidade-${cliente.complexidade}">
+                        ${cliente.complexidade}
+                    </div>
+                </div>
+                <div class="cliente-details">
+                    <div class="cliente-detail">
+                        <span class="detail-label">Grupo</span>
+                        <span class="detail-value">${cliente.grupo}</span>
+                    </div>
+                    <div class="cliente-detail">
+                        <span class="detail-label">Competência</span>
+                        <span class="detail-value">${cliente.competencia}</span>
+                    </div>
+                    <div class="cliente-detail">
+                        <span class="detail-label">Faturamento</span>
+                        <span class="detail-value">${faturamentoFormatado}</span>
+                    </div>
+                </div>
+            </div>
+        `;
+    }).join('');
+
+    // RESUMO PADRÃO - IGUAL AOS OUTROS
+    const totalClientes = clientes.length;
+    const totalFaturamento = clientes.reduce((sum, cliente) => sum + cliente.faturamento, 0);
+    const faturamentoTotalFormatado = new Intl.NumberFormat('pt-BR', {
+        style: 'currency',
+        currency: 'BRL',
+        minimumFractionDigits: 2
+    }).format(totalFaturamento);
+
+    const resumoHTML = `
+        <div class="cliente-item resumo-total">
+            <div class="cliente-header">
+                <div class="cliente-nome">RESUMO - CLIENTES</div>
+            </div>
+            <div class="cliente-details">
+                <div class="cliente-detail">
+                    <span class="detail-label">Total de Clientes</span>
+                    <span class="detail-value">${totalClientes}</span>
+                </div>
+                <div class="cliente-detail">
+                    <span class="detail-label">Faturamento Total</span>
+                    <span class="detail-value">${faturamentoTotalFormatado}</span>
+                </div>
+            </div>
+        </div>
+    `;
+
+    return `
+        <div id="clientes-view" class="clientes-view">
+            ${resumoHTML}
+            ${clientesHTML}
+        </div>
+    `;
+}
+
+
+/**
+ * Renderiza a view de grupos para comparação
+ */
+function renderGruposViewComparacao(grupos) {
+    if (grupos.length === 0) {
+        return `
+            <div id="grupos-view" class="grupos-view" style="display: none;">
+                <div class="cliente-item" style="text-align: center; color: var(--dark-secondary-text); padding: 30px;">
+                    Nenhum grupo encontrado
+                </div>
+            </div>
+        `;
+    }
+
+    const gruposHTML = grupos.map(grupo => {
+        const faturamentoFormatado = new Intl.NumberFormat('pt-BR', {
+            style: 'currency',
+            currency: 'BRL',
+            minimumFractionDigits: 2
+        }).format(grupo.faturamentoTotal);
+
+        return `
+            <div class="cliente-item grupo-item">
+                <div class="cliente-header">
+                    <div class="cliente-nome">${grupo.nome}</div>
+                    <div class="grupo-stats">
+                        <span class="complexidade-count complexidade-A">A: ${grupo.complexidades['A'] || 0}</span>
+                        <span class="complexidade-count complexidade-B">B: ${grupo.complexidades['B'] || 0}</span>
+                        <span class="complexidade-count complexidade-C">C: ${grupo.complexidades['C'] || 0}</span>
+                    </div>
+                </div>
+                <div class="cliente-details">
+                    <div class="cliente-detail">
+                        <span class="detail-label">Total de Clientes</span>
+                        <span class="detail-value">${grupo.clientes.length}</span>
+                    </div>
+                    <div class="cliente-detail">
+                        <span class="detail-label">Faturamento Total</span>
+                        <span class="detail-value">${faturamentoFormatado}</span>
+                    </div>
+                </div>
+                <div class="grupo-clientes-list">
+                    ${grupo.clientes.map(cliente => {
+                        const faturamentoCliente = new Intl.NumberFormat('pt-BR', {
+                            style: 'currency',
+                            currency: 'BRL',
+                            minimumFractionDigits: 2
+                        }).format(cliente.faturamento);
+                        
+                        return `
+                            <div class="cliente-subitem">
+                                <span class="cliente-subnome">${cliente.nome}</span>
+                                <span class="cliente-subcomplexidade complexidade-${cliente.complexidade}">${cliente.complexidade}</span>
+                                <span class="cliente-subfaturamento">${faturamentoCliente}</span>
+                            </div>
+                        `;
+                    }).join('')}
+                </div>
+            </div>
+        `;
+    }).join('');
+
+    // RESUMO PADRÃO - IGUAL AOS OUTROS
+    const totalGrupos = grupos.length;
+    const totalClientesGrupos = grupos.reduce((sum, grupo) => sum + grupo.clientes.length, 0);
+    const totalFaturamentoGrupos = grupos.reduce((sum, grupo) => sum + grupo.faturamentoTotal, 0);
+    const faturamentoTotalFormatado = new Intl.NumberFormat('pt-BR', {
+        style: 'currency',
+        currency: 'BRL',
+        minimumFractionDigits: 2
+    }).format(totalFaturamentoGrupos);
+
+    const resumoHTML = `
+        <div class="cliente-item resumo-total">
+            <div class="cliente-header">
+                <div class="cliente-nome">RESUMO - GRUPOS</div>
+            </div>
+            <div class="cliente-details">
+                <div class="cliente-detail">
+                    <span class="detail-label">Total de Grupos</span>
+                    <span class="detail-value">${totalGrupos}</span>
+                </div>
+                <div class="cliente-detail">
+                    <span class="detail-label">Total de Clientes</span>
+                    <span class="detail-value">${totalClientesGrupos}</span>
+                </div>
+                <div class="cliente-detail">
+                    <span class="detail-label">Faturamento Total</span>
+                    <span class="detail-value">${faturamentoTotalFormatado}</span>
+                </div>
+            </div>
+        </div>
+    `;
+
+    return `
+        <div id="grupos-view" class="grupos-view" style="display: none;">
+            ${resumoHTML}
+            ${gruposHTML}
+        </div>
+    `;
 }
 
 /**
@@ -646,11 +993,14 @@ function aggregateData() {
             }
         }
 
+        const cargoCarteira = collab['Cargo na carteira'] || collab.Cargo || 'N/A';
+
         responsibleMap.set(resp, {
             NOME: resp,
             ID: resp.toLowerCase().replace(/\s/g, ''),
             INICIAL: resp.charAt(0),
             CARGO: cargoPadronizado,
+            CARGO_CARTEIRA: cargoCarteira,
             UNIDADE: collab.Unidade || 'Não Definida',
             DEPARTAMENTO: collab.Departamento || 'Não Definido',
             SALARIO_BASE: salario,
@@ -728,6 +1078,7 @@ function aggregateData() {
             ...member,
             COMPETENCIAS: competenciasArray,
             CLIENTES_TOTAIS: clientesTotais,
+            GRUPOS_DISTINTOS: gruposDistintos,
             DESCRICAO: `Clientes: ${clientesTotais} | Pendências: ${member.TAREFAS_PENDENTES} | Faturamento: ${new Intl.NumberFormat('pt-BR', {
                 style: 'currency',
                 currency: 'BRL',
@@ -1039,6 +1390,82 @@ function filterCards() {
 }
 
 /**
+ * Alterna a visibilidade dos salários para uma seção específica
+ */
+function toggleSalariosPorSecao(secaoId) {
+    // Inverte o estado da seção
+    estadoSalariosPorSecao[secaoId] = !estadoSalariosPorSecao[secaoId];
+    
+    // Atualiza o botão
+    atualizarBotaoSecao(secaoId);
+    
+    // Atualiza os cards da seção
+    atualizarSalariosSecao(secaoId);
+}
+
+/**
+ * Atualiza o estado visual do botão de uma seção
+ */
+function atualizarBotaoSecao(secaoId) {
+    const botoes = document.querySelectorAll(`.role-header button[onclick="toggleSalariosPorSecao('${secaoId}')"]`);
+    
+    botoes.forEach(botao => {
+        const icone = botao.querySelector('.privacy-icon');
+        const texto = botao.querySelector('.privacy-text');
+        
+        if (estadoSalariosPorSecao[secaoId]) {
+            botao.classList.add('active');
+            icone.textContent = '💰';
+            texto.textContent = 'Ocultar';
+        } else {
+            botao.classList.remove('active');
+            icone.textContent = '💰️';
+            texto.textContent = 'Salários';
+        }
+    });
+}
+
+/**
+ * Atualiza a visibilidade dos salários em uma seção específica
+ */
+function atualizarSalariosSecao(secaoId) {
+    const containerId = `${secaoId}-cards`;
+    const cardsContainer = document.getElementById(containerId);
+    
+    if (!cardsContainer) return;
+    
+    const cards = cardsContainer.querySelectorAll('.team-card');
+    
+    cards.forEach(card => {
+        const infoList = card.querySelector('.info-list');
+        
+        if (estadoSalariosPorSecao[secaoId]) {
+            // Mostrar salário - adiciona a linha
+            if (!card.querySelector('.info-item-salario')) {
+                const memberId = card.getAttribute('onclick').match(/openModal\('([^']+)'\)/)[1];
+                const member = teamData.find(m => m.ID === memberId);
+                
+                if (member) {
+                    const salarioItem = document.createElement('div');
+                    salarioItem.className = 'info-item info-item-salario';
+                    salarioItem.innerHTML = `
+                        <span class="info-label">Salário</span>
+                        <span class="info-value currency-value">R$ ${member.SALARIO}</span>
+                    `;
+                    infoList.appendChild(salarioItem);
+                }
+            }
+        } else {
+            // Ocultar salário - remove a linha
+            const salarioItem = card.querySelector('.info-item-salario');
+            if (salarioItem) {
+                salarioItem.remove();
+            }
+        }
+    });
+}
+
+/**
  * FUNÇÃO DE RENDERIZAÇÃO DOS CARDS (Com agrupamento e rolagem horizontal por cargo)
  */
 function renderTeamCards(data) {
@@ -1046,7 +1473,93 @@ function renderTeamCards(data) {
     if (!grid) return;
     grid.innerHTML = '';
 
-    data.sort((a, b) => b.STAT_3_VALOR - a.STAT_3_VALOR); 
+    data.sort((a, b) => b.STAT_3_VALOR - a.STAT_3_VALOR);    
+
+    // ========== CARDS FIXOS - ADICIONE ESTA SEÇÃO ==========
+    const roleSectionFixa = document.createElement('div');
+    roleSectionFixa.className = 'role-section';
+    
+    // Título para os cards fixos COM BOTÃO
+    const headerFixoHTML = `
+        <div class="role-header">
+            <h2>Desenvolvedores</h2>
+            <button class="privacy-toggle-btn" onclick="toggleSalariosPorSecao('desenvolvedores')">
+                <span class="privacy-icon">💰️</span>
+                <span class="privacy-text">Salários</span>
+            </button>
+        </div>
+    `;
+    roleSectionFixa.innerHTML = headerFixoHTML;
+    
+    const cardsContainerFixo = document.createElement('div');
+    cardsContainerFixo.className = 'role-cards-container';
+    cardsContainerFixo.id = 'desenvolvedores-cards';
+    
+    // Card 1 - Juan Rodrigues (SEM LINHA DE SALÁRIO INICIALMENTE)
+    const cardJuan = `
+        <div class="team-card" onclick="openModal('juan-rodrigues-fixo')">
+            <div class="card-header" style="background: linear-gradient(135deg, #600018, #800020);">
+                <div class="card-photo">
+                    <img src="fotos/juan_rodrigues.png" alt="Juan Rodrigues">
+                </div>
+                <div class="card-header-info">
+                    <h2>Juan Rodrigues</h2>
+                    <div class="role">Desenvolvedor</div>
+                    <div class="cargo-carteira"> </div>
+                </div>
+            </div>
+            <div class="card-content">
+                <div class="info-list">
+                    <div class="info-item">
+                        <span class="info-label">Formação</span>
+                        <span class="info-value">Logística</span>
+                    </div>
+                    <div class="info-item">
+                        <span class="info-label">Idade</span>
+                        <span class="info-value">21 anos</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    `;
+    
+    // Card 2 - Willian Emanoel (SEM LINHA DE SALÁRIO INICIALMENTE)
+    const cardWillian = `
+        <div class="team-card" onclick="openModal('willian-emanoel-fixo')">
+            <div class="card-header" style="background: linear-gradient(135deg, #600018, #800020);">
+                <div class="card-photo">
+                    <img src="fotos/willian_emanoel.png" alt="Willian Emanoel">
+                </div>
+                <div class="card-header-info">
+                    <h2>Willian Emanoel</h2>
+                    <div class="role">Desenvolvedor</div>
+                    <div class="cargo-carteira"> </div>
+                </div>
+            </div>
+            <div class="card-content">
+                <div class="info-list">
+                    <div class="info-item">
+                        <span class="info-label">Formação</span>
+                        <span class="info-value">Desenvolvimento de sistemas</span>
+                    </div>
+                    <div class="info-item">
+                        <span class="info-label">Idade</span>
+                        <span class="info-value">22 anos</span>
+                    </div>
+                    <div class="info-item">
+                        <span class="info-label">Faturamento</span>
+                        <span class="info-value currency-value">-</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    `;
+    
+    cardsContainerFixo.innerHTML = cardJuan + cardWillian;
+    roleSectionFixa.appendChild(cardsContainerFixo);
+    grid.appendChild(roleSectionFixa);
+    // ========== FIM DOS CARDS FIXOS ==========
+
     if (data.length === 0) {
         grid.innerHTML = '<p style="color: var(--dark-secondary-text); text-align: center; grid-column: 1 / -1;">Nenhum resultado encontrado.</p>';
         return;
@@ -1073,15 +1586,25 @@ function renderTeamCards(data) {
         const roleSection = document.createElement('div');
         roleSection.className = 'role-section';
 
-        // 3a. Cria o TÍTULO/SEPARADOR para o cargo
-        const roleTitleHtml = `<div class="role-header"><h2>${roleName}</h2></div>`;
-        roleSection.innerHTML += roleTitleHtml;
+        // 3a. Cria o TÍTULO/SEPARADOR para o cargo COM BOTÃO
+        const roleId = roleName.toLowerCase().replace(/\s+/g, '-');
+        const roleTitleHtml = `
+            <div class="role-header">
+                <h2>${roleName}</h2>
+                <button class="privacy-toggle-btn" onclick="toggleSalariosPorSecao('${roleId}')">
+                    <span class="privacy-icon">💰️</span>
+                    <span class="privacy-text">Salários</span>
+                </button>
+            </div>
+        `;
+        roleSection.innerHTML = roleTitleHtml;
 
         // 3b. Cria o contêiner de rolagem (Netflix style)
         const cardsContainer = document.createElement('div');
         cardsContainer.className = 'role-cards-container';
+        cardsContainer.id = `${roleId}-cards`;
         
-        // 3c. Renderiza os CARDS de cada membro dentro do container de rolagem
+        // 3c. Renderiza os CARDS de cada membro dentro do container de rolagem (SEM SALÁRIO INICIALMENTE)
         members.forEach(member => {
             const memberId = member.ID;
             
@@ -1090,7 +1613,7 @@ function renderTeamCards(data) {
             
             // Calcula a cor mais escura para o degradê (30% mais escuro)
             const darkerColor = darkenColor(baseColorHex, 0.7);
-            const lighterColor = lightenColor(baseColorHex, 0.2); // 0.4 = 40% mais claro
+            const lighterColor = lightenColor(baseColorHex, 0.2);
 
             function lightenColor(hex, percent) {
                 const color = hex.startsWith('#') ? hex.slice(1) : hex;
@@ -1121,6 +1644,14 @@ function renderTeamCards(data) {
             // Informação secundária do card (Departamento + Unidade)
             const secondaryInfo = `${member.DEPARTAMENTO}${member.UNIDADE && member.UNIDADE !== 'Não Definida' ? ' (' + member.UNIDADE + ')' : ''}`;
 
+            // Formatação dos valores monetários
+            const faturamentoFormatado = new Intl.NumberFormat('pt-BR', { 
+                style: 'currency', 
+                currency: 'BRL', 
+                minimumFractionDigits: 2 
+            }).format(member.FATURAMENTO_TOTAL);
+
+            // CARD SEM LINHA DE SALÁRIO (apenas 3 linhas)
             const cardHtml = `
                 <div class="team-card" onclick="openModal('${memberId}')"> 
                     
@@ -1131,6 +1662,7 @@ function renderTeamCards(data) {
                         <div class="card-header-info">
                             <h2>${member.NOME}</h2>
                             <div class="role">${secondaryInfo}</div>
+                            <div class="cargo-carteira">${member.CARGO_CARTEIRA || 'N/A'}</div>
                         </div>
                     </div>
 
@@ -1141,16 +1673,12 @@ function renderTeamCards(data) {
                                 <span class="info-value">${member.CLIENTES_TOTAIS}</span>
                             </div>
                             <div class="info-item">
-                                <span class="info-label">Salário</span>
-                                <span class="info-value currency-value">R$ ${member.SALARIO}</span>
+                                <span class="info-label">Grupos</span>
+                                <span class="info-value">${member.GRUPOS_DISTINTOS || 0}</span>
                             </div>
                             <div class="info-item">
                                 <span class="info-label">Faturamento</span>
-                                <span class="info-value currency-value">${new Intl.NumberFormat('pt-BR', { 
-                                    style: 'currency', 
-                                    currency: 'BRL', 
-                                    minimumFractionDigits: 2 
-                                }).format(member.FATURAMENTO_TOTAL)}</span>
+                                <span class="info-value currency-value">${faturamentoFormatado}</span>
                             </div>
                         </div>
                     </div>
@@ -1197,6 +1725,87 @@ function renderModals(data) {
     const container = document.getElementById('modal-container');
     if (!container) return;
     container.innerHTML = '';
+
+    // ========== MODAIS FIXOS - ADICIONE ESTA SEÇÃO ==========
+    // Modal para Juan Rodrigues (SEMPRE MOSTRA SALÁRIO NO MODAL)
+    const modalJuan = `
+        <div id="juan-rodrigues-fixo-modal" class="modal">
+            <div class="modal-content" id="juan-rodrigues-fixo-modal-content">
+                <span class="close-btn" onclick="closeModal('juan-rodrigues-fixo')">&times;</span>
+                <div class="employee-profile">
+                    <div class="profile-pic" style="background-color: #800020;">
+                        <img class="profile-image" src="fotos/juan_rodrigues.png" alt="Juan Rodrigues">
+                    </div>
+                    <div class="profile-info-text">
+                        <h2>Juan Rodrigues</h2>
+                        <div class="role">Desenvolvedor</div>
+                        <div class="profile-admissions">
+                            <span>Idade: 21 | Formação: Logística | Salário: <span class="salary">R$ -</span></span>
+                        </div>
+                    </div>
+                </div>
+                <div class="stats-row">
+                    <div class="stat-item">
+                        <div class="stat-title">Experiência</div>
+                        <div class="stat-value">2 anos</div>
+                    </div>
+                    <div class="stat-item">
+                        <div class="stat-title">Especialidade</div>
+                        <div class="stat-value">Análise de dados</div>
+                    </div>
+                </div>
+                    <div class="linkedin">
+                        <span>Linkedin: juanrodriguessilva</span>
+                    </div>
+                    <div class="espaço">
+                        <span> . </span>
+                    </div>
+
+            </div>
+        </div>
+    `;
+
+    // Modal para Willian Emanoel (SEMPRE MOSTRA SALÁRIO NO MODAL)
+    const modalWillian = `
+        <div id="willian-emanoel-fixo-modal" class="modal">
+            <div class="modal-content" id="willian-emanoel-fixo-modal-content">
+                <span class="close-btn" onclick="closeModal('willian-emanoel-fixo')">&times;</span>
+                <div class="employee-profile">
+                    <div class="profile-pic" style="background-color: #800020;">
+                        <img class="profile-image" src="fotos/willian_emanoel.png" alt="Willian Emanoel">
+                    </div>
+                    <div class="profile-info-text">
+                        <h2>Willian Emanoel</h2>
+                        <div class="role">Desenvolvedor</div>
+                        <div class="profile-admissions">
+                            <span>Formado em Gestao da Tecnologia da Informação/Analise e Desenvolvimento de Sistemas | Salário: <span class="salary">R$ -</span></span>
+                        </div>
+                    </div>
+                </div>
+                <div class="stats-row">
+                    <div class="stat-item">
+                        <div class="stat-title">Experiência</div>
+                        <div class="stat-value">3 anos</div>
+                    </div>
+                    <div class="stat-item">
+                        <div class="stat-title">Projetos</div>
+                        <div class="stat-value">20+</div>
+                    </div>
+                    <div class="stat-item">
+                        <div class="stat-title">Especialidade</div>
+                        <div class="stat-value">Full-stack</div>
+                    </div>
+                </div>
+                <div class="modal-buttons-container">
+                    <button class="ver-clientes-btn" onclick="alert('Informações de contato: willian@empresa.com')">
+                        Contato
+                    </button>
+                </div>
+            </div>
+        </div>
+    `;
+
+    container.innerHTML = modalJuan + modalWillian;
 
     data.forEach(member => {
         // Usa o HEX direto do JS para o background do perfil no modal
@@ -1284,7 +1893,7 @@ function renderModals(data) {
                             <span class="quality-percentage">${finalProgressPercentage}%</span>
                         </div>
                     </div>
-                    <p style="text-align: center; font-size: 0.8rem; color: var(--dark-secondary-text); margin-top: 10px;">${member.TAREFAS_COMPLETAS} Entregue no prazo / ${totalTasks} Totais</p>
+                    <p style="text-align: center; font-size: 0.8rem; color: var(--dark-secondary-text); margin-top: 10px;">${member.TAREFAS_CONCLUIDAS} Entregue no prazo de ${totalTasks} Totais</p>
                 </div>
             </div>
         `;
@@ -1313,12 +1922,13 @@ function renderModals(data) {
                         <div class="profile-pic" style="background-color: ${color};">
                             ${profileContent}
                         </div>
-                        <div class="profile-info-text">
+                        <div class="profile-info-text-vertical">
                             <h2>${member.NOME}</h2>
-                            <div class="role">${member.CARGO} em ${member.DEPARTAMENTO} (${member.UNIDADE && member.UNIDADE !== 'Não Definida' ? member.UNIDADE : 'N/A'})</div>
-                            
-                            <div class="profile-admissions">
-                                <span>Desde: ${member.DATA_ADMISSAO} | Salário: <span class="salary">R$ ${member.SALARIO}</span></span>
+                            <div class="profile-details-list">
+                                <div class="detail-value-only">${member.CARGO_CARTEIRA}</div>
+                                <div class="detail-value-only">${member.DEPARTAMENTO}</div>
+                                <div class="detail-value-only">Desde: ${member.DATA_ADMISSAO}</div>
+                                <div class="detail-value-only salary-value">Salário: R$ ${member.SALARIO}</div>
                             </div>
                         </div>
                     </div>
@@ -1332,7 +1942,15 @@ function renderModals(data) {
                 </div>
             </div>
         `;
-
+        // MODIFICAÇÃO: Adiciona classe condicional para salário no modal
+        const classeSalarioModal = salariosVisiveis ? '' : 'salario-oculto';
+        
+        // SEMPRE MOSTRA SALÁRIO NO MODAL (visualização detalhada)
+        const profileAdmissionsHTML = `
+            <div class="profile-admissions">
+                <span>Desde: ${member.DATA_ADMISSAO} | Salário: <span class="salary">R$ ${member.SALARIO}</span></span>
+            </div>
+        `;
         container.innerHTML += modalHtml;
     });
 }
@@ -1353,7 +1971,36 @@ function abrirClientesSidebar(memberId) {
 
     const filterCompetencia = document.getElementById('filter-competencia').value;
     
-    // Atualiza o título do sidebar com informação do filtro
+    // Ordenar clientes por complexidade (A -> B -> C)
+    clientes.sort((a, b) => {
+        const ordemComplexidade = { 'A': 1, 'B': 2, 'C': 3 };
+        return ordemComplexidade[a.complexidade] - ordemComplexidade[b.complexidade];
+    });
+
+    // Calcular grupos
+    const gruposMap = new Map();
+    clientes.forEach(cliente => {
+        const grupo = cliente.grupo || 'Sem Grupo';
+        if (!gruposMap.has(grupo)) {
+            gruposMap.set(grupo, {
+                nome: grupo,
+                clientes: [],
+                complexidades: { 'A': 0, 'B': 0, 'C': 0 },
+                faturamentoTotal: 0
+            });
+        }
+        
+        const grupoData = gruposMap.get(grupo);
+        grupoData.clientes.push(cliente);
+        if (grupoData.complexidades[cliente.complexidade] !== undefined) {
+            grupoData.complexidades[cliente.complexidade]++;
+        }
+        grupoData.faturamentoTotal += cliente.faturamento;
+    });
+
+    const grupos = Array.from(gruposMap.values());
+
+    // Atualiza o título do sidebar
     const titleElement = sidebar.querySelector('.clientes-sidebar-title');
     if (titleElement) {
         let titleText = `${member.NOME}`;
@@ -1363,82 +2010,244 @@ function abrirClientesSidebar(memberId) {
         titleElement.textContent = titleText;
     }
 
-    // Renderiza a lista de clientes (um por linha)
-    if (clientes.length === 0) {
-        let mensagem = 'Nenhum cliente encontrado para este colaborador';
-        if (filterCompetencia) {
-            mensagem += ` com a competência "${filterCompetencia}"`;
-        }
-        clientesList.innerHTML = `
-            <div class="cliente-item" style="text-align: center; color: var(--dark-secondary-text);">
-                ${mensagem}
-            </div>
-        `;
-    } else {
-        clientesList.innerHTML = clientes.map(cliente => {
-            const faturamentoFormatado = new Intl.NumberFormat('pt-BR', {
-                style: 'currency',
-                currency: 'BRL',
-                minimumFractionDigits: 2
-            }).format(cliente.faturamento);
+    // Renderizar views
+    const clientesViewHTML = renderClientesView(clientes);
+    const gruposViewHTML = renderGruposView(grupos);
 
-            return `
-                <div class="cliente-item">
-                    <div class="cliente-header">
-                        <div class="cliente-nome">${cliente.nome}</div>
-                        <div class="cliente-complexidade complexidade-${cliente.complexidade}">
-                            ${cliente.complexidade}
-                        </div>
-                    </div>
-                    <div class="cliente-details">
-                        <div class="cliente-detail">
-                            <span class="detail-label">Grupo</span>
-                            <span class="detail-value">${cliente.grupo}</span>
-                        </div>
-                        <div class="cliente-detail">
-                            <span class="detail-label">Faturamento</span>
-                            <span class="detail-value">${faturamentoFormatado}</span>
-                        </div>
-                    </div>
-                </div>
-            `;
-        }).join('');
-        
-        // Adiciona contador de clientes
-        const totalClientes = clientes.length;
-        const totalFaturamento = clientes.reduce((sum, cliente) => sum + cliente.faturamento, 0);
-        const faturamentoTotalFormatado = new Intl.NumberFormat('pt-BR', {
-            style: 'currency',
-            currency: 'BRL',
-            minimumFractionDigits: 2
-        }).format(totalFaturamento);
-        
-        const resumoHTML = `
-            <div class="cliente-item" style="background-color: var(--modal-border);">
-                <div class="cliente-header">
-                    <div class="cliente-nome">RESUMO</div>
-                </div>
-                <div class="cliente-details">
-                    <div class="cliente-detail">
-                        <span class="detail-label">Total de Clientes</span>
-                        <span class="detail-value">${totalClientes}</span>
-                    </div>
-                    <div class="cliente-detail">
-                        <span class="detail-label">Faturamento Total</span>
-                        <span class="detail-value">${faturamentoTotalFormatado}</span>
-                    </div>
+    // NOVA ESTRUTURA COM SCROLL ÚNICO
+    const sidebarContent = `
+        <div class="clientes-main-content">
+            <div class="clientes-toggle-container">
+                <div class="clientes-toggle-buttons">
+                    <button class="toggle-btn active" data-view="clientes">Clientes</button>
+                    <button class="toggle-btn" data-view="grupos">Grupos</button>
                 </div>
             </div>
-        `;
+            <div class="clientes-content">
+                ${clientesViewHTML}
+                ${gruposViewHTML}
+            </div>
+        </div>
+    `;
+
+    clientesList.innerHTML = sidebarContent;
+
+    // Adicionar event listeners aos botões de toggle
+    setTimeout(() => {
+        const toggleButtons = clientesList.querySelectorAll('.toggle-btn');
+        const clientesView = document.getElementById('clientes-view');
+        const gruposView = document.getElementById('grupos-view');
         
-        clientesList.innerHTML = resumoHTML + clientesList.innerHTML;
-    }
+        // Inicialmente mostrar apenas clientes
+        if (gruposView) gruposView.style.display = 'none';
+        
+        toggleButtons.forEach(btn => {
+            btn.addEventListener('click', function() {
+                // Remover active de todos
+                toggleButtons.forEach(b => b.classList.remove('active'));
+                // Adicionar active ao clicado
+                this.classList.add('active');
+                
+                const view = this.getAttribute('data-view');
+                
+                if (view === 'clientes') {
+                    if (clientesView) clientesView.style.display = 'block';
+                    if (gruposView) gruposView.style.display = 'none';
+                } else {
+                    if (clientesView) clientesView.style.display = 'none';
+                    if (gruposView) gruposView.style.display = 'block';
+                }
+            });
+        });
+    }, 100);
 
     // Abre o sidebar
     sidebar.classList.add('visible');
     overlay.classList.add('visible');
-    
+}
 
+/**
+ * Renderiza a view de clientes
+ */
+function renderClientesView(clientes) {
+    if (clientes.length === 0) {
+        return `
+            <div id="clientes-view" class="clientes-view">
+                <div class="cliente-item" style="text-align: center; color: var(--dark-secondary-text); padding: 30px;">
+                    Nenhum cliente encontrado para este colaborador
+                </div>
+            </div>
+        `;
+    }
+
+    const clientesHTML = clientes.map(cliente => {
+        const faturamentoFormatado = new Intl.NumberFormat('pt-BR', {
+            style: 'currency',
+            currency: 'BRL',
+            minimumFractionDigits: 2
+        }).format(cliente.faturamento);
+
+        return `
+            <div class="cliente-item">
+                <div class="cliente-header">
+                    <div class="cliente-nome">${cliente.nome}</div>
+                    <div class="cliente-complexidade complexidade-${cliente.complexidade}">
+                        ${cliente.complexidade}
+                    </div>
+                </div>
+                <div class="cliente-details">
+                    <div class="cliente-detail">
+                        <span class="detail-label">Grupo</span>
+                        <span class="detail-value">${cliente.grupo}</span>
+                    </div>
+                    <div class="cliente-detail">
+                        <span class="detail-label">Competência</span>
+                        <span class="detail-value">${cliente.competencia}</span>
+                    </div>
+                    <div class="cliente-detail">
+                        <span class="detail-label">Faturamento</span>
+                        <span class="detail-value">${faturamentoFormatado}</span>
+                    </div>
+                </div>
+            </div>
+        `;
+    }).join('');
+
+    // NOVO RESUMO COM DESIGN MELHORADO
+    const totalClientes = clientes.length;
+    const totalFaturamento = clientes.reduce((sum, cliente) => sum + cliente.faturamento, 0);
+    const faturamentoTotalFormatado = new Intl.NumberFormat('pt-BR', {
+        style: 'currency',
+        currency: 'BRL',
+        minimumFractionDigits: 2
+    }).format(totalFaturamento);
+
+    const resumoHTML = `
+        <div class="cliente-item resumo-total">
+            <div class="cliente-header">
+                <div class="cliente-nome">RESUMO - CLIENTES</div>
+            </div>
+            <div class="cliente-details">
+                <div class="cliente-detail">
+                    <span class="detail-label">Total de Clientes</span>
+                    <span class="detail-value">${totalClientes}</span>
+                </div>
+                <div class="cliente-detail">
+                    <span class="detail-label">Faturamento Total</span>
+                    <span class="detail-value">${faturamentoTotalFormatado}</span>
+                </div>
+            </div>
+        </div>
+    `;
+
+    return `
+        <div id="clientes-view" class="clientes-view">
+            ${resumoHTML}
+            ${clientesHTML}
+        </div>
+    `;
+}
+
+/**
+ * Renderiza a view de grupos
+ */
+function renderGruposView(grupos) {
+    if (grupos.length === 0) {
+        return `
+            <div id="grupos-view" class="grupos-view" style="display: none;">
+                <div class="cliente-item" style="text-align: center; color: var(--dark-secondary-text); padding: 30px;">
+                    Nenhum grupo encontrado para este colaborador
+                </div>
+            </div>
+        `;
+    }
+
+    const gruposHTML = grupos.map(grupo => {
+        const faturamentoFormatado = new Intl.NumberFormat('pt-BR', {
+            style: 'currency',
+            currency: 'BRL',
+            minimumFractionDigits: 2
+        }).format(grupo.faturamentoTotal);
+
+        return `
+            <div class="cliente-item grupo-item">
+                <div class="cliente-header">
+                    <div class="cliente-nome">${grupo.nome}</div>
+                    <div class="grupo-stats">
+                        <span class="complexidade-count complexidade-A">A: ${grupo.complexidades['A'] || 0}</span>
+                        <span class="complexidade-count complexidade-B">B: ${grupo.complexidades['B'] || 0}</span>
+                        <span class="complexidade-count complexidade-C">C: ${grupo.complexidades['C'] || 0}</span>
+                    </div>
+                </div>
+                <div class="cliente-details">
+                    <div class="cliente-detail">
+                        <span class="detail-label">Total de Clientes</span>
+                        <span class="detail-value">${grupo.clientes.length}</span>
+                    </div>
+                    <div class="cliente-detail">
+                        <span class="detail-label">Faturamento Total</span>
+                        <span class="detail-value">${faturamentoFormatado}</span>
+                    </div>
+                </div>
+                <div class="grupo-clientes-list">
+                    ${grupo.clientes.map(cliente => {
+                        const faturamentoCliente = new Intl.NumberFormat('pt-BR', {
+                            style: 'currency',
+                            currency: 'BRL',
+                            minimumFractionDigits: 2
+                        }).format(cliente.faturamento);
+                        
+                        return `
+                            <div class="cliente-subitem">
+                                <span class="cliente-subnome">${cliente.nome}</span>
+                                <span class="cliente-subcomplexidade complexidade-${cliente.complexidade}">${cliente.complexidade}</span>
+                                <span class="cliente-subfaturamento">${faturamentoCliente}</span>
+                            </div>
+                        `;
+                    }).join('')}
+                </div>
+            </div>
+        `;
+    }).join('');
+    
+    // NOVO RESUMO PARA GRUPOS COM DESIGN MELHORADO
+    const totalGrupos = grupos.length;
+    const totalClientesGrupos = grupos.reduce((sum, grupo) => sum + grupo.clientes.length, 0);
+    const totalFaturamentoGrupos = grupos.reduce((sum, grupo) => sum + grupo.faturamentoTotal, 0);
+    const faturamentoTotalFormatado = new Intl.NumberFormat('pt-BR', {
+        style: 'currency',
+        currency: 'BRL',
+        minimumFractionDigits: 2
+    }).format(totalFaturamentoGrupos);
+
+    const resumoHTML = `
+        <div class="cliente-item resumo-total">
+            <div class="cliente-header">
+                <div class="cliente-nome">RESUMO - GRUPOS</div>
+            </div>
+            <div class="cliente-details">
+                <div class="cliente-detail">
+                    <span class="detail-label">Total de Grupos</span>
+                    <span class="detail-value">${totalGrupos}</span>
+                </div>
+                <div class="cliente-detail">
+                    <span class="detail-label">Total de Clientes</span>
+                    <span class="detail-value">${totalClientesGrupos}</span>
+                </div>
+                <div class="cliente-detail">
+                    <span class="detail-label">Faturamento Total</span>
+                    <span class="detail-value">${faturamentoTotalFormatado}</span>
+                </div>
+            </div>
+        </div>
+    `;
+
+    return `
+        <div id="grupos-view" class="grupos-view" style="display: none;">
+            ${resumoHTML}
+            ${gruposHTML}
+        </div>
+    `;
 }
 /**
  * Fecha o sidebar de clientes
@@ -1594,6 +2403,13 @@ function getClientesDoColaborador(nomeColaborador) {
         complexidade: cliente.Complexidade || 'N/A',
         faturamento: parseCurrency(cliente.Faturamento || 0)
     }));
+
+    // Ordenar por complexidade (A -> B -> C)
+    return clientesFiltrados.sort((a, b) => {
+        const ordemComplexidade = { 'A': 1, 'B': 2, 'C': 3, 'N/A': 4 };
+        return ordemComplexidade[a.complexidade] - ordemComplexidade[b.complexidade];
+    });
+
 }
 
 
@@ -1602,6 +2418,7 @@ function getClientesDoColaborador(nomeColaborador) {
 // INICIALIZAÇÃO
 // ----------------------------------------------------------------------
 
+// No final do script.js, adicione:
 document.addEventListener('DOMContentLoaded', () => {
     loadAllCSVs();
 
@@ -1623,6 +2440,7 @@ document.addEventListener('DOMContentLoaded', () => {
     if (competenciaSelect) {
         competenciaSelect.addEventListener('change', filterCards);
     }
+    
+    // INICIALIZA O BOTÃO DE PRIVACIDADE
+    atualizarEstadoBotaoPrivacidade();
 });
-
-
