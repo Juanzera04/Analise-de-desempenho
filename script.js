@@ -1494,71 +1494,6 @@ function renderTeamCards(data) {
     const cardsContainerFixo = document.createElement('div');
     cardsContainerFixo.className = 'role-cards-container';
     cardsContainerFixo.id = 'desenvolvedores-cards';
-    
-    // Card 1 - Juan Rodrigues (SEM LINHA DE SALÁRIO INICIALMENTE)
-    const cardJuan = `
-        <div class="team-card" onclick="openModal('juan-rodrigues-fixo')">
-            <div class="card-header" style="background: linear-gradient(135deg, #600018, #800020);">
-                <div class="card-photo">
-                    <img src="fotos/juan_rodrigues.png" alt="Juan Rodrigues">
-                </div>
-                <div class="card-header-info">
-                    <h2>Juan Rodrigues</h2>
-                    <div class="role">Desenvolvedor</div>
-                    <div class="cargo-carteira"> </div>
-                </div>
-            </div>
-            <div class="card-content">
-                <div class="info-list">
-                    <div class="info-item">
-                        <span class="info-label">Formação</span>
-                        <span class="info-value">Logística</span>
-                    </div>
-                    <div class="info-item">
-                        <span class="info-label">Idade</span>
-                        <span class="info-value">21 anos</span>
-                    </div>
-                </div>
-            </div>
-        </div>
-    `;
-    
-    // Card 2 - Willian Emanoel (SEM LINHA DE SALÁRIO INICIALMENTE)
-    const cardWillian = `
-        <div class="team-card" onclick="openModal('willian-emanoel-fixo')">
-            <div class="card-header" style="background: linear-gradient(135deg, #600018, #800020);">
-                <div class="card-photo">
-                    <img src="fotos/willian_emanoel.png" alt="Willian Emanoel">
-                </div>
-                <div class="card-header-info">
-                    <h2>Willian Emanoel</h2>
-                    <div class="role">Desenvolvedor</div>
-                    <div class="cargo-carteira"> </div>
-                </div>
-            </div>
-            <div class="card-content">
-                <div class="info-list">
-                    <div class="info-item">
-                        <span class="info-label">Formação</span>
-                        <span class="info-value">Desenvolvimento de sistemas</span>
-                    </div>
-                    <div class="info-item">
-                        <span class="info-label">Idade</span>
-                        <span class="info-value">22 anos</span>
-                    </div>
-                    <div class="info-item">
-                        <span class="info-label">Faturamento</span>
-                        <span class="info-value currency-value">-</span>
-                    </div>
-                </div>
-            </div>
-        </div>
-    `;
-    
-    cardsContainerFixo.innerHTML = cardJuan + cardWillian;
-    roleSectionFixa.appendChild(cardsContainerFixo);
-    grid.appendChild(roleSectionFixa);
-    // ========== FIM DOS CARDS FIXOS ==========
 
     if (data.length === 0) {
         grid.innerHTML = '<p style="color: var(--dark-secondary-text); text-align: center; grid-column: 1 / -1;">Nenhum resultado encontrado.</p>';
@@ -1725,87 +1660,6 @@ function renderModals(data) {
     const container = document.getElementById('modal-container');
     if (!container) return;
     container.innerHTML = '';
-
-    // ========== MODAIS FIXOS - ADICIONE ESTA SEÇÃO ==========
-    // Modal para Juan Rodrigues (SEMPRE MOSTRA SALÁRIO NO MODAL)
-    const modalJuan = `
-        <div id="juan-rodrigues-fixo-modal" class="modal">
-            <div class="modal-content" id="juan-rodrigues-fixo-modal-content">
-                <span class="close-btn" onclick="closeModal('juan-rodrigues-fixo')">&times;</span>
-                <div class="employee-profile">
-                    <div class="profile-pic" style="background-color: #800020;">
-                        <img class="profile-image" src="fotos/juan_rodrigues.png" alt="Juan Rodrigues">
-                    </div>
-                    <div class="profile-info-text">
-                        <h2>Juan Rodrigues</h2>
-                        <div class="role">Desenvolvedor</div>
-                        <div class="profile-admissions">
-                            <span>Idade: 21 | Formação: Logística | Salário: <span class="salary">R$ -</span></span>
-                        </div>
-                    </div>
-                </div>
-                <div class="stats-row">
-                    <div class="stat-item">
-                        <div class="stat-title">Experiência</div>
-                        <div class="stat-value">2 anos</div>
-                    </div>
-                    <div class="stat-item">
-                        <div class="stat-title">Especialidade</div>
-                        <div class="stat-value">Análise de dados</div>
-                    </div>
-                </div>
-                    <div class="linkedin">
-                        <span>Linkedin: juanrodriguessilva</span>
-                    </div>
-                    <div class="espaço">
-                        <span> . </span>
-                    </div>
-
-            </div>
-        </div>
-    `;
-
-    // Modal para Willian Emanoel (SEMPRE MOSTRA SALÁRIO NO MODAL)
-    const modalWillian = `
-        <div id="willian-emanoel-fixo-modal" class="modal">
-            <div class="modal-content" id="willian-emanoel-fixo-modal-content">
-                <span class="close-btn" onclick="closeModal('willian-emanoel-fixo')">&times;</span>
-                <div class="employee-profile">
-                    <div class="profile-pic" style="background-color: #800020;">
-                        <img class="profile-image" src="fotos/willian_emanoel.png" alt="Willian Emanoel">
-                    </div>
-                    <div class="profile-info-text">
-                        <h2>Willian Emanoel</h2>
-                        <div class="role">Desenvolvedor</div>
-                        <div class="profile-admissions">
-                            <span>Formado em Gestao da Tecnologia da Informação/Analise e Desenvolvimento de Sistemas | Salário: <span class="salary">R$ -</span></span>
-                        </div>
-                    </div>
-                </div>
-                <div class="stats-row">
-                    <div class="stat-item">
-                        <div class="stat-title">Experiência</div>
-                        <div class="stat-value">3 anos</div>
-                    </div>
-                    <div class="stat-item">
-                        <div class="stat-title">Projetos</div>
-                        <div class="stat-value">20+</div>
-                    </div>
-                    <div class="stat-item">
-                        <div class="stat-title">Especialidade</div>
-                        <div class="stat-value">Full-stack</div>
-                    </div>
-                </div>
-                <div class="modal-buttons-container">
-                    <button class="ver-clientes-btn" onclick="alert('Informações de contato: willian@empresa.com')">
-                        Contato
-                    </button>
-                </div>
-            </div>
-        </div>
-    `;
-
-    container.innerHTML = modalJuan + modalWillian;
 
     data.forEach(member => {
         // Usa o HEX direto do JS para o background do perfil no modal
@@ -2444,3 +2298,4 @@ document.addEventListener('DOMContentLoaded', () => {
     // INICIALIZA O BOTÃO DE PRIVACIDADE
     atualizarEstadoBotaoPrivacidade();
 });
+
