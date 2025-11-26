@@ -1730,10 +1730,7 @@ function renderModals(data) {
                     <div class="stat-title">${member.STAT_2_TITULO}</div>
                     <div class="stat-value">${member.STAT_2_VALOR}</div>
                 </div>
-                <div class="stat-item">
-                    <div class="stat-title">${stat3Titulo}</div>
-                    <div class="stat-value">${stat3Display} ${stat3Trend}</div>
-                </div>
+                ${stat3HTML}
             </div>
         `;
 
