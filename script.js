@@ -1678,26 +1678,47 @@ function renderModals(data) {
         let stat3Trend = '';     // possível seta/indicador
 
         if (member.DEPARTAMENTO === "DP - DEPTO PESSOAL") {
-            // soma a coluna Vidas em clientData para esse colaborador
-            const vidasTotal = clientData
-                .filter(c => (c.Responsável || c.Responsavel || c['responsavel']) === member.NOME)
-                .reduce((sum, c) => sum + (parseInt(c.Vidas) || 0), 0);
 
-            stat3Titulo = 'Vidas';
-            stat3Display = vidasTotal;
-            stat3Trend = ''; // sem trend para vidas
+            const clientesDoColab = clientData.filter(c =>
+                (c.Responsável || c.Responsavel || c['responsavel']) === member.NOME
+            );
+
+            const vidasTotal = clientesDoColab.reduce((s, c) => s + (parseInt(c.Vidas) || 0), 0);
+            const admissoesTotal = clientesDoColab.reduce((s, c) => s + (parseInt(c.Admissões) || 0), 0);
+            const demissoesTotal = clientesDoColab.reduce((s, c) => s + (parseInt(c["Demissões"]) || 0), 0);
+
+            stat3HTML = `
+                <div class="stat-item">
+                    <div class="stat-title">Vidas</div>
+                    <div class="stat-value">${vidasTotal}</div>
+                </div>
+                <div class="stat-item">
+                    <div class="stat-title">Admissões</div>
+                    <div class="stat-value">${admissoesTotal}</div>
+                </div>
+                <div class="stat-item">
+                    <div class="stat-title">Demissões</div>
+                    <div class="stat-value">${demissoesTotal}</div>
+                </div>
+            `;
+
         } else {
-            // formata faturamento
-            stat3Titulo = member.STAT_3_TITULO || 'Faturamento';
-            stat3Display = new Intl.NumberFormat('pt-BR', {
+            // MODO NORMAL — usa faturamento já existente
+            const faturamentoFormatado = new Intl.NumberFormat('pt-BR', {
                 style: 'currency',
                 currency: 'BRL',
                 minimumFractionDigits: 2
             }).format(member.STAT_3_VALOR || 0);
 
-            stat3Trend = (member.STAT_3_VALOR && member.STAT_3_VALOR > 0) ? '<span class="positive">↑</span>' : '';
-        }
+            const trend = member.STAT_3_VALOR > 0 ? '<span class="positive">↑</span>' : '';
 
+            stat3HTML = `
+                <div class="stat-item">
+                    <div class="stat-title">${member.STAT_3_TITULO}</div>
+                    <div class="stat-value">${faturamentoFormatado} ${trend}</div>
+                </div>
+            `;
+        }
         // depois, no statsRowHTML, substitua as referências por:
         const statsRowHTML = `
             <div class="stats-row">
@@ -1715,7 +1736,7 @@ function renderModals(data) {
                 </div>
             </div>
         `;
-        
+
         const finalProgressPercentage = member.PROGRESSO_VALOR;
         const finalProgressAngle = (finalProgressPercentage / 100) * 360;
         const complexidadeCounts = member.COMPLEXIDADE_COUNT;
