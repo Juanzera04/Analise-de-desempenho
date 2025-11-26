@@ -1673,16 +1673,32 @@ function renderModals(data) {
             profileContent = member.INICIAL;
         }
 
-        // Faturamento formatado
-        let stat3Value = member.STAT_3_VALOR;
-        stat3Value = new Intl.NumberFormat('pt-BR', { 
-            style: 'currency', 
-            currency: 'BRL', 
-            minimumFractionDigits: 2 
-        }).format(stat3Value);
-        
-        const stat3Trend = member.STAT_3_VALOR > 0 ? '<span class="positive">↑</span>' : '';
+        let stat3Titulo = member.STAT_3_TITULO;
+        let stat3Display = '';   // string final que aparecerá no modal
+        let stat3Trend = '';     // possível seta/indicador
 
+        if (member.DEPARTAMENTO === "DP - DEPTO PESSOAL") {
+            // soma a coluna Vidas em clientData para esse colaborador
+            const vidasTotal = clientData
+                .filter(c => (c.Responsável || c.Responsavel || c['responsavel']) === member.NOME)
+                .reduce((sum, c) => sum + (parseInt(c.Vidas) || 0), 0);
+
+            stat3Titulo = 'Vidas';
+            stat3Display = vidasTotal;
+            stat3Trend = ''; // sem trend para vidas
+        } else {
+            // formata faturamento
+            stat3Titulo = member.STAT_3_TITULO || 'Faturamento';
+            stat3Display = new Intl.NumberFormat('pt-BR', {
+                style: 'currency',
+                currency: 'BRL',
+                minimumFractionDigits: 2
+            }).format(member.STAT_3_VALOR || 0);
+
+            stat3Trend = (member.STAT_3_VALOR && member.STAT_3_VALOR > 0) ? '<span class="positive">↑</span>' : '';
+        }
+
+        // depois, no statsRowHTML, substitua as referências por:
         const statsRowHTML = `
             <div class="stats-row">
                 <div class="stat-item">
@@ -1694,12 +1710,12 @@ function renderModals(data) {
                     <div class="stat-value">${member.STAT_2_VALOR}</div>
                 </div>
                 <div class="stat-item">
-                    <div class="stat-title">${member.STAT_3_TITULO}</div>
-                    <div class="stat-value">${stat3Value} ${stat3Trend}</div>
+                    <div class="stat-title">${stat3Titulo}</div>
+                    <div class="stat-value">${stat3Display} ${stat3Trend}</div>
                 </div>
             </div>
         `;
-
+        
         const finalProgressPercentage = member.PROGRESSO_VALOR;
         const finalProgressAngle = (finalProgressPercentage / 100) * 360;
         const complexidadeCounts = member.COMPLEXIDADE_COUNT;
