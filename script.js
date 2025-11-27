@@ -1803,12 +1803,9 @@ function renderModals(data) {
                             <span class="quality-percentage">${finalProgressPercentage}%</span>
                         </div>
                     </div>
-                    <p style="text-align: center; font-size: 0.8rem; color: var(--dark-secondary-text); margin-top: 10px;">
-                        ${pontuacaoTotal} pontos
-                    </p>
-                    <p style="text-align: center; font-size: 0.8rem; color: var(--dark-secondary-text); margin-top: 2px;">
-                        Rank ${rankMedio}/${rankTotalMedio}
-                    </p>
+                    <p class="rank-info">${pontuacaoTotal} pontos</p>
+                    <p class="rank-info">Rank ${rankMedio}/${rankTotalMedio}</p>
+
                 </div>
             </div>
         `;
