@@ -1742,6 +1742,16 @@ function renderModals(data) {
         const pontuacaoTotal = taskData
             .filter(t => (t.Responsável || t.Responsavel || t['responsavel']) === member.NOME)
             .reduce((sum, t) => sum + (parseInt(t.Pontuação) || 0), 0);
+        // RANK MÉDIO DO COLABORADOR
+        const ranks = taskData.filter(t =>
+            (t.Responsável || t.Responsavel || t['responsavel']) === member.NOME
+        ).map(t => parseInt(t.Rank) || 0);
+
+        const rankMedio = ranks.length > 0
+            ? Math.round(ranks.reduce((sum, r) => sum + r, 0) / ranks.length)
+            : 0;
+
+
 
         const maxCount = Math.max(complexidadeCounts['A'], complexidadeCounts['B'], complexidadeCounts['C']);
         const barHeightA = maxCount > 0 ? (complexidadeCounts['A'] / maxCount) * 100 : (complexidadeCounts['A'] > 0 ? 20 : 0);
@@ -1785,6 +1795,9 @@ function renderModals(data) {
                     </div>
                     <p style="text-align: center; font-size: 0.8rem; color: var(--dark-secondary-text); margin-top: 10px;">
                         ${pontuacaoTotal} pontos
+                    </p>
+                    <p style="text-align: center; font-size: 0.8rem; color: var(--dark-secondary-text); margin-top: 2px;">
+                        ${rankMedio}º colocado
                     </p>
                 </div>
             </div>
