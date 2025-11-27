@@ -1739,8 +1739,10 @@ function renderModals(data) {
         const complexidadeCounts = member.COMPLEXIDADE_COUNT;
         const totalClients = member.CLIENTES_TOTAIS;
         const totalTasks = member.TAREFAS_TOTAIS;
-        
-        // GRÁFICO DE BARRAS PARA COMPLEXIDADE - COR DO CARGO ATUAL
+        const pontuacaoTotal = taskData
+            .filter(t => (t.Responsável || t.Responsavel || t['responsavel']) === member.NOME)
+            .reduce((sum, t) => sum + (parseInt(t.Pontuação) || 0), 0);
+
         const maxCount = Math.max(complexidadeCounts['A'], complexidadeCounts['B'], complexidadeCounts['C']);
         const barHeightA = maxCount > 0 ? (complexidadeCounts['A'] / maxCount) * 100 : (complexidadeCounts['A'] > 0 ? 20 : 0);
         const barHeightB = maxCount > 0 ? (complexidadeCounts['B'] / maxCount) * 100 : (complexidadeCounts['B'] > 0 ? 20 : 0);
@@ -1781,7 +1783,9 @@ function renderModals(data) {
                             <span class="quality-percentage">${finalProgressPercentage}%</span>
                         </div>
                     </div>
-                    <p style="text-align: center; font-size: 0.8rem; color: var(--dark-secondary-text); margin-top: 10px;">${member.TAREFAS_CONCLUIDAS} Entregue no prazo de ${totalTasks} Totais</p>
+                    <p style="text-align: center; font-size: 0.8rem; color: var(--dark-secondary-text); margin-top: 10px;">
+                        ${pontuacaoTotal} pontos
+                    </p>
                 </div>
             </div>
         `;
