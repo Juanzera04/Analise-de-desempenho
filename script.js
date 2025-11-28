@@ -1525,7 +1525,7 @@ function atualizarVidasSecao(secaoId) {
                     const vidasItem = document.createElement('div');
                     vidasItem.className = 'info-item info-item-vidas';
                     vidasItem.innerHTML = `
-                        <span class="info-label">♥ Vidas</span>
+                        <span class="info-label">Vidas</span>
                         <span class="info-value">${member.VIDAS_TOTAL || 0}</span>
                     `;
                     infoList.appendChild(vidasItem);

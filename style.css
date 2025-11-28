@@ -1676,20 +1676,26 @@ h1 {
     flex-shrink: 0;
 }
 
+.privacy-buttons {
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+    gap: 10px;
+}
+
+
 .privacy-toggle-btn {
+    margin-left: auto;
+    padding: 6px 12px;
+    font-size: 0.75rem;
+    border-radius: 6px;
+    cursor: pointer;
+    background-color: var(--dark-card-bg);
+    color: var(--dark-text);
+    border: 1px solid var(--dark-border);
     display: flex;
     align-items: center;
     gap: 6px;
-    background: var(--dark-card);
-    color: var(--dark-text);
-    border: 1px solid var(--modal-border);
-    border-radius: 15px;
-    padding: 6px 12px;
-    cursor: pointer;
-    transition: all 0.3s ease;
-    font-size: 0.8rem;
-    font-weight: 500;
-    flex-shrink: 0;
 }
 
 .privacy-toggle-btn:hover {
