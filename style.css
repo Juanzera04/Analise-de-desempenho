@@ -1679,6 +1679,8 @@ h1 {
 .privacy-buttons {
     display: flex;
     flex-direction: row;
+    border: solid 3px #fff;
+    border-radius: 6px;
     align-items: center;
     gap: 10px;
 }

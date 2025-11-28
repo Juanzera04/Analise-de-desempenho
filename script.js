@@ -453,122 +453,189 @@ function selecionarColaboradorTime(timeNum, memberId = null) {
 function renderizarModalTime(timeNum, member) {
     const modalElement = document.getElementById(`modal-time-${timeNum}`);
     if (!modalElement) return;
-    
-    // Obtém o filtro de competência atual do time
+
     const filtroCompetencia = document.getElementById(`filtro-competencia-${timeNum}`).value;
-    
-    // Recalcula as métricas APENAS com os dados filtrados pela competência
-    const memberComDadosFiltrados = calcularDadosFiltrados(member, filtroCompetencia);
-    
-    const color = roleStripColorMap[memberComDadosFiltrados.CARGO] || roleStripColorMap['Outros'];
-    
-    // Define o conteúdo da foto
-    let photoContent;
-    if (memberComDadosFiltrados.FOTO_URL && memberComDadosFiltrados.FOTO_URL !== 'N/A') {
-        photoContent = `<img class="profile-image" src="${memberComDadosFiltrados.FOTO_URL}" alt="${memberComDadosFiltrados.NOME}">`;
+
+    // Dados recalculados para filtros
+    const m = calcularDadosFiltrados(member, filtroCompetencia);
+
+    const color = roleStripColorMap[m.CARGO] || roleStripColorMap["Outros"];
+
+    // FOTO OU INICIAL
+    const photoContent = (m.FOTO_URL && m.FOTO_URL !== "N/A")
+        ? `<img class="profile-image" src="${m.FOTO_URL}" alt="${m.NOME}">`
+        : m.INICIAL;
+
+    // ============================
+    //       LÓGICA DP (VIDAS)
+    // ============================
+    let stat3HTML = "";
+
+    if (m.DEPARTAMENTO === "DP - DEPTO PESSOAL") {
+        const clientesDoColab = clientData.filter(c =>
+            (c.Responsável || c.Responsavel || c["responsavel"]) === m.NOME
+        );
+
+        const vidasTotal = clientesDoColab.reduce((s, c) => s + (parseInt(c.Vidas) || 0), 0);
+        const admissoesTotal = clientesDoColab.reduce((s, c) => s + (parseInt(c.Admissões) || 0), 0);
+        const demissoesTotal = clientesDoColab.reduce((s, c) => s + (parseInt(c["Demissões"]) || 0), 0);
+
+        stat3HTML = `
+            <div class="stat-item">
+                <div class="stat-title">Vidas</div>
+                <div class="stat-value">${vidasTotal.toLocaleString('pt-BR')}</div>
+            </div>
+            <div class="stat-item">
+                <div class="stat-title">Admissões</div>
+                <div class="stat-value">${admissoesTotal.toLocaleString('pt-BR')}</div>
+            </div>
+            <div class="stat-item">
+                <div class="stat-title">Demissões</div>
+                <div class="stat-value">${demissoesTotal.toLocaleString('pt-BR')}</div>
+            </div>
+        `;
     } else {
-        photoContent = memberComDadosFiltrados.INICIAL;
+        const faturamentoFormatado = new Intl.NumberFormat("pt-BR", {
+            style: "currency",
+            currency: "BRL"
+        }).format(m.STAT_3_VALOR || 0);
+
+        const trend = m.STAT_3_VALOR > 0 ? `<span class="positive">↑</span>` : "";
+
+        stat3HTML = `
+            <div class="stat-item">
+                <div class="stat-title">${m.STAT_3_TITULO}</div>
+                <div class="stat-value">${faturamentoFormatado} ${trend}</div>
+            </div>
+        `;
     }
-    
-    // Faturamento formatado
-    const stat3Value = new Intl.NumberFormat('pt-BR', { 
-        style: 'currency', 
-        currency: 'BRL', 
-        minimumFractionDigits: 2 
-    }).format(memberComDadosFiltrados.STAT_3_VALOR);
-    
-    const stat3Trend = memberComDadosFiltrados.STAT_3_VALOR > 0 ? '<span class="positive">↑</span>' : '';
-    
-    // Gráficos de complexidade
-    const finalProgressPercentage = memberComDadosFiltrados.PROGRESSO_VALOR;
+
+    // ===============================
+    //   PONTUAÇÃO / RANK / RANK TOTAL
+    // ===============================
+    const tarefasColab = taskData.filter(t =>
+        (t.Responsável || t.Responsavel || t["responsavel"]) === m.NOME
+    );
+
+    const pontuacaoTotal = tarefasColab.reduce((s, t) => s + (parseInt(t.Pontuação) || 0), 0);
+
+    const ranks = tarefasColab.map(t => parseInt(t.Rank) || 0);
+    const rankMedio = ranks.length ? Math.round(ranks.reduce((s, r) => s + r, 0) / ranks.length) : 0;
+
+    const ranksTotais = tarefasColab.map(t => parseInt(t["Rank Total"]) || 0);
+    const rankTotalMedio = ranksTotais.length ? Math.round(ranksTotais.reduce((s, r) => s + r, 0) / ranksTotais.length) : 0;
+
+    let rankClass = "rank-default";
+    let rankEmoji = "";
+
+    if (rankMedio === 1) { rankClass = "rank-gold"; rankEmoji = "🥇"; }
+    else if (rankMedio === 2) { rankClass = "rank-silver"; rankEmoji = "🥈"; }
+    else if (rankMedio === 3) { rankClass = "rank-bronze"; rankEmoji = "🥉"; }
+
+    // ===============================
+    //  GRÁFICOS DE BARRAS + PROGRESSO
+    // ===============================
+    const complexidadeCounts = m.COMPLEXIDADE_COUNT;
+    const maxCount = Math.max(complexidadeCounts.A, complexidadeCounts.B, complexidadeCounts.C);
+
+    const barHeightA = maxCount ? (complexidadeCounts.A / maxCount) * 100 : 0;
+    const barHeightB = maxCount ? (complexidadeCounts.B / maxCount) * 100 : 0;
+    const barHeightC = maxCount ? (complexidadeCounts.C / maxCount) * 100 : 0;
+
+    const finalProgressPercentage = m.PROGRESSO_VALOR;
     const finalProgressAngle = (finalProgressPercentage / 100) * 360;
-    const complexidadeCounts = memberComDadosFiltrados.COMPLEXIDADE_COUNT;
-    
-    const maxCount = Math.max(complexidadeCounts['A'], complexidadeCounts['B'], complexidadeCounts['C']);
-    const barHeightA = maxCount > 0 ? (complexidadeCounts['A'] / maxCount) * 100 : (complexidadeCounts['A'] > 0 ? 20 : 0);
-    const barHeightB = maxCount > 0 ? (complexidadeCounts['B'] / maxCount) * 100 : (complexidadeCounts['B'] > 0 ? 20 : 0);
-    const barHeightC = maxCount > 0 ? (complexidadeCounts['C'] / maxCount) * 100 : (complexidadeCounts['C'] > 0 ? 20 : 0);
-    
+
+    const statsRowHTML = `
+        <div class="stats-row">
+            <div class="stat-item">
+                <div class="stat-title">${m.STAT_1_TITULO}</div>
+                <div class="stat-value">${m.STAT_1_VALOR}</div>
+            </div>
+            <div class="stat-item">
+                <div class="stat-title">${m.STAT_2_TITULO}</div>
+                <div class="stat-value">${m.STAT_2_VALOR}</div>
+            </div>
+            ${stat3HTML}
+        </div>
+    `;
+
+    const complexityBarsHTML = `
+        <div class="complexity-section">
+            <div class="complexity-column">
+                <div class="section-title">Complexidade dos Clientes</div>
+                <div class="complexity-bar-chart">
+                    <div class="bar-chart-item">
+                        <span class="bar-label">A</span>
+                        <div class="bar-container">
+                            <div class="bar" style="height:${barHeightA}%; background:${color};"></div>
+                        </div>
+                        <span class="bar-value">${complexidadeCounts.A}</span>
+                    </div>
+                    <div class="bar-chart-item">
+                        <span class="bar-label">B</span>
+                        <div class="bar-container">
+                            <div class="bar" style="height:${barHeightB}%; background:${color};"></div>
+                        </div>
+                        <span class="bar-value">${complexidadeCounts.B}</span>
+                    </div>
+                    <div class="bar-chart-item">
+                        <span class="bar-label">C</span>
+                        <div class="bar-container">
+                            <div class="bar" style="height:${barHeightC}%; background:${color};"></div>
+                        </div>
+                        <span class="bar-value">${complexidadeCounts.C}</span>
+                    </div>
+                </div>
+            </div>
+
+            <div class="complexity-column">
+                <div class="section-title">${m.PROGRESSO_TITULO}</div>
+
+                <div class="quality-chart-container">
+                    <div class="quality-pie-chart"
+                        style="background:conic-gradient(${color} ${finalProgressAngle}deg,#444 0deg);">
+                        <span class="quality-percentage">${finalProgressPercentage}%</span>
+                    </div>
+                </div>
+
+                <p class="rank-info">${pontuacaoTotal} pontos</p>
+                <p class="rank-info ${rankClass}">
+                    ${rankEmoji} Rank ${rankMedio}/${rankTotalMedio}
+                </p>
+            </div>
+        </div>
+    `;
+
     const modalHTML = `
         <div class="time-modal">
             <div class="employee-profile">
-                <div class="profile-pic" style="background-color: ${color};">
-                    ${photoContent}
-                </div>
+                <div class="profile-pic" style="background:${color};">${photoContent}</div>
+
                 <div class="profile-info-text-vertical">
-                    <h2>${memberComDadosFiltrados.NOME}</h2>
+                    <h2>${m.NOME}</h2>
                     <div class="profile-details-list">
-                        <div class="detail-value-only">${memberComDadosFiltrados.CARGO_CARTEIRA}</div>
-                        <div class="detail-value-only">${memberComDadosFiltrados.DEPARTAMENTO}</div>
-                        <div class="detail-value-only">Desde: ${memberComDadosFiltrados.DATA_ADMISSAO}</div>
-                        <div class="detail-value-only salary-value">Salário: R$ ${memberComDadosFiltrados.SALARIO}</div>
+                        <div class="detail-value-only">${m.CARGO_CARTEIRA}</div>
+                        <div class="detail-value-only">${m.DEPARTAMENTO}</div>
+                        <div class="detail-value-only">Desde: ${m.DATA_ADMISSAO}</div>
+                        <div class="detail-value-only salary-value">Salário: R$ ${m.SALARIO}</div>
                     </div>
                 </div>
             </div>
-            
-            <div class="stats-row">
-                <div class="stat-item">
-                    <div class="stat-title">${memberComDadosFiltrados.STAT_1_TITULO}</div>
-                    <div class="stat-value">${memberComDadosFiltrados.STAT_1_VALOR}</div>
-                </div>
-                <div class="stat-item">
-                    <div class="stat-title">${memberComDadosFiltrados.STAT_2_TITULO}</div>
-                    <div class="stat-value">${memberComDadosFiltrados.STAT_2_VALOR}</div>
-                </div>
-                <div class="stat-item">
-                    <div class="stat-title">${memberComDadosFiltrados.STAT_3_TITULO}</div>
-                    <div class="stat-value">${stat3Value} ${stat3Trend}</div>
-                </div>
-            </div>
-            
-            <div class="complexity-section">
-                <div class="complexity-column">
-                    <div class="section-title">Complexidade dos Clientes</div>
-                    <div class="complexity-bar-chart">
-                        <div class="bar-chart-item">
-                            <span class="bar-label">A</span>
-                            <div class="bar-container">
-                                <div class="bar" style="height: ${barHeightA}%; background-color: ${color};"></div>
-                            </div>
-                            <span class="bar-value">${complexidadeCounts['A']}</span>
-                        </div>
-                        <div class="bar-chart-item">
-                            <span class="bar-label">B</span>
-                            <div class="bar-container">
-                                <div class="bar" style="height: ${barHeightB}%; background-color: ${color};"></div>
-                            </div>
-                            <span class="bar-value">${complexidadeCounts['B']}</span>
-                        </div>
-                        <div class="bar-chart-item">
-                            <span class="bar-label">C</span>
-                            <div class="bar-container">
-                                <div class="bar" style="height: ${barHeightC}%; background-color: ${color};"></div>
-                            </div>
-                            <span class="bar-value">${complexidadeCounts['C']}</span>
-                        </div>
-                    </div>
-                </div>
-                <div class="complexity-column">
-                    <div class="section-title">${memberComDadosFiltrados.PROGRESSO_TITULO}</div>
-                    <div class="quality-chart-container">
-                        <div class="quality-pie-chart" style="background: conic-gradient(${color} ${finalProgressAngle}deg, #444 0deg);">
-                            <span class="quality-percentage">${finalProgressPercentage}%</span>
-                        </div>
-                    </div>
-                    <p style="text-align: center; font-size: 0.8rem; color: var(--dark-secondary-text); margin-top: 10px;">${memberComDadosFiltrados.TAREFAS_CONCLUIDAS} Entregue no prazo de ${memberComDadosFiltrados.TAREFAS_TOTAIS} Totais</p>
-                </div>
-            </div>
-            
+
+            ${statsRowHTML}
+            ${complexityBarsHTML}
+
             <div class="modal-buttons-container">
-                <button class="ver-clientes-btn" onclick="abrirClientesSidebarComparacao('${memberComDadosFiltrados.ID}', ${timeNum})">
-                    Clientes ${filtroCompetencia ? `(${filtroCompetencia})` : ''}
+                <button class="ver-clientes-btn"
+                        onclick="abrirClientesSidebarComparacao('${m.ID}', ${timeNum})">
+                    Clientes ${filtroCompetencia ? `(${filtroCompetencia})` : ""}
                 </button>
             </div>
         </div>
     `;
-    
+
     modalElement.innerHTML = modalHTML;
-    modalElement.className = 'time-modal';
+    modalElement.className = "time-modal";
 }
 
 /**
@@ -1526,7 +1593,7 @@ function atualizarVidasSecao(secaoId) {
                     vidasItem.className = 'info-item info-item-vidas';
                     vidasItem.innerHTML = `
                         <span class="info-label">Vidas</span>
-                        <span class="info-value">${member.VIDAS_TOTAL || 0}</span>
+                        <span class="info-value">${(member.VIDAS_TOTAL || 0).toLocaleString('pt-BR')}</span>
                     `;
                     infoList.appendChild(vidasItem);
                 }
@@ -1780,15 +1847,15 @@ function renderModals(data) {
             stat3HTML = `
                 <div class="stat-item">
                     <div class="stat-title">Vidas</div>
-                    <div class="stat-value">${vidasTotal}</div>
+                    <div class="stat-value">${vidasTotal.toLocaleString('pt-BR')}</div>
                 </div>
                 <div class="stat-item">
                     <div class="stat-title">Admissões</div>
-                    <div class="stat-value">${admissoesTotal}</div>
+                    <div class="stat-value">${admissoesTotal.toLocaleString('pt-BR')}</div>
                 </div>
                 <div class="stat-item">
                     <div class="stat-title">Demissões</div>
-                    <div class="stat-value">${demissoesTotal}</div>
+                    <div class="stat-value">${demissoesTotal.toLocaleString('pt-BR')}</div>
                 </div>
             `;
 
