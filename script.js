@@ -14,6 +14,8 @@ let fileTarefa = null;
 let salariosVisiveis = false;
 let vidasVisiveis = false;
 
+
+const estadoVidasPorSecao = {};
 const estadoSalariosPorSecao = {};
 
 document.getElementById('file-colaborador').addEventListener('change', (e) => {
@@ -1012,6 +1014,7 @@ function aggregateData() {
             CLIENTES_TOTAIS: 0,
             TAREFAS_CONCLUIDAS: 0,
             TAREFAS_PENDENTES: 0,
+            VIDAS_TOTAL: 0,
         });
     });
 
@@ -1029,6 +1032,8 @@ function aggregateData() {
 
         teamMember.FATURAMENTO_TOTAL += faturamento;
         teamMember.CLIENTES_TOTAIS += 1;
+        teamMember.VIDAS_TOTAL += parseInt(client.Vidas || client.Vidas || 0) || 0;
+
 
         if (complexidade && teamMember.COMPLEXIDADE_COUNT.hasOwnProperty(complexidade.toUpperCase())) {
             teamMember.COMPLEXIDADE_COUNT[complexidade.toUpperCase()]++;
@@ -1402,9 +1407,15 @@ function toggleSalariosPorSecao(secaoId) {
     // Atualiza os cards da seção
     atualizarSalariosSecao(secaoId);
 }
-function toggleVidasPorSecao(roleId) {
-    vidasVisiveis = !vidasVisiveis;
-    renderCards(processedData);  // mesma lógica usada no salário
+function toggleVidasPorSecao(secaoId) {
+    // Inverte o estado da seção (true = mostrar)
+    estadoVidasPorSecao[secaoId] = !estadoVidasPorSecao[secaoId];
+
+    // Atualiza o botão visual
+    atualizarBotaoVidasSecao(secaoId);
+
+    // Atualiza os cards da seção (insere/remove a linha)
+    atualizarVidasSecao(secaoId);
 }
 
 
@@ -1465,6 +1476,66 @@ function atualizarSalariosSecao(secaoId) {
             const salarioItem = card.querySelector('.info-item-salario');
             if (salarioItem) {
                 salarioItem.remove();
+            }
+        }
+    });
+}
+
+function atualizarBotaoVidasSecao(secaoId) {
+    const botoes = document.querySelectorAll(`.role-header button[onclick="toggleVidasPorSecao('${secaoId}')"]`);
+    
+    botoes.forEach(botao => {
+        const icone = botao.querySelector('.privacy-icon');
+        const texto = botao.querySelector('.privacy-text');
+        
+        if (estadoVidasPorSecao[secaoId]) {
+            botao.classList.add('active');
+            icone.textContent = '❤';
+            texto.textContent = 'Ocultar';
+        } else {
+            botao.classList.remove('active');
+            icone.textContent = '❤';
+            texto.textContent = 'Vidas';
+        }
+    });
+}
+
+function atualizarVidasSecao(secaoId) {
+    const containerId = `${secaoId}-cards`;
+    const cardsContainer = document.getElementById(containerId);
+    
+    if (!cardsContainer) return;
+    
+    const cards = cardsContainer.querySelectorAll('.team-card');
+    
+    cards.forEach(card => {
+        const infoList = card.querySelector('.info-list');
+        
+        if (estadoVidasPorSecao[secaoId]) {
+            // Mostrar vidas - adiciona a linha se não existir
+            if (!card.querySelector('.info-item-vidas')) {
+                // Extrai memberId a partir do onclick do card (mesma técnica do salário)
+                const onClickAttr = card.getAttribute('onclick') || '';
+                const match = onClickAttr.match(/openModal\('([^']+)'\)/);
+                const memberId = match ? match[1] : null;
+
+                const member = teamData.find(m => m.ID === memberId);
+                
+                if (member) {
+                    const vidasItem = document.createElement('div');
+                    vidasItem.className = 'info-item info-item-vidas';
+                    vidasItem.innerHTML = `
+                        <span class="info-label">♥ Vidas</span>
+                        <span class="info-value">${member.VIDAS_TOTAL || 0}</span>
+                    `;
+                    infoList.appendChild(vidasItem);
+                }
+            }
+        } else {
+            // Ocultar vidas - remove a linha
+            const vidasItem = card.querySelector('.info-item-vidas');
+            if (vidasItem) {
+                vidasItem.remove();
             }
         }
     });
@@ -1634,14 +1705,6 @@ function renderTeamCards(data) {
                                 <span class="info-label">Faturamento</span>
                                 <span class="info-value currency-value">${faturamentoFormatado}</span>
                             </div>
-
-                            ${vidasVisiveis ? `
-                            <div class="info-item">
-                                <span class="info-label">♥ Vidas</span>
-                                <span class="info-value">${member.VIDAS_TOTAL || 0}</span>
-                            </div>
-                            ` : ''}
-
                         </div>
                     </div>
                 </div>
@@ -1802,11 +1865,6 @@ function renderModals(data) {
             rankClass = "rank-bronze";
             rankEmoji = "🥉";
         }
-
-        member.VIDAS_TOTAL = clientData
-            .filter(c => (c.Responsável || c.Responsavel || c['responsavel']) === member.NOME)
-            .reduce((sum, c) => sum + (parseInt(c.Vidas) || 0), 0);
-
 
         const maxCount = Math.max(complexidadeCounts['A'], complexidadeCounts['B'], complexidadeCounts['C']);
         const barHeightA = maxCount > 0 ? (complexidadeCounts['A'] / maxCount) * 100 : (complexidadeCounts['A'] > 0 ? 20 : 0);
