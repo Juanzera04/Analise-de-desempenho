@@ -958,7 +958,7 @@ h1 {
 /* ============================================= */
 
 .comparar-modal-content {
-    max-width: 1300px !important;
+    max-width: 1400px !important;
     width: 90% !important;
 }
 
@@ -1679,12 +1679,9 @@ h1 {
 .privacy-buttons {
     display: flex;
     flex-direction: row;
-    border: solid 3px #fff;
-    border-radius: 6px;
     align-items: center;
     gap: 10px;
 }
-
 
 .privacy-toggle-btn {
     margin-left: auto;
