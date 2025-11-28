@@ -1299,7 +1299,7 @@ function renderAutocompleteList(data) {
  * E APLICA OS FILTROS DE COMPETÊNCIA NOS DADOS TAMBÉM
  */
 function recalculateAggregations(filteredCollaborators) {
-    const filterCompetencia = document.getElementById('filter-competencia').value;
+    const filterCompetencia = document.getElementById('filter-competencia').value = "Outubro";
 
     const collaboratorMap = new Map();
     filteredCollaborators.forEach(collab => {
