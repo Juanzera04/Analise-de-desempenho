@@ -11,9 +11,9 @@ let time2Filtrados = [];
 let fileColaborador = null;
 let fileCliente = null;
 let fileTarefa = null;
-// Variável global para controlar o estado de visibilidade dos salários
 let salariosVisiveis = false;
-// Objeto para controlar o estado de cada seção
+let vidasVisiveis = false;
+
 const estadoSalariosPorSecao = {};
 
 document.getElementById('file-colaborador').addEventListener('change', (e) => {
@@ -1402,6 +1402,11 @@ function toggleSalariosPorSecao(secaoId) {
     // Atualiza os cards da seção
     atualizarSalariosSecao(secaoId);
 }
+function toggleVidasPorSecao(roleId) {
+    vidasVisiveis = !vidasVisiveis;
+    renderCards(processedData);  // mesma lógica usada no salário
+}
+
 
 /**
  * Atualiza o estado visual do botão de uma seção
@@ -1489,6 +1494,7 @@ function renderTeamCards(data) {
             </button>
         </div>
     `;
+
     roleSectionFixa.innerHTML = headerFixoHTML;
     
     const cardsContainerFixo = document.createElement('div');
@@ -1526,12 +1532,22 @@ function renderTeamCards(data) {
         const roleTitleHtml = `
             <div class="role-header">
                 <h2>${roleName}</h2>
-                <button class="privacy-toggle-btn" onclick="toggleSalariosPorSecao('${roleId}')">
-                    <span class="privacy-icon">💰️</span>
-                    <span class="privacy-text">Salários</span>
-                </button>
+
+                <div class="privacy-buttons">
+                    <button class="privacy-toggle-btn" onclick="toggleSalariosPorSecao('${roleId}')">
+                        <span class="privacy-icon">💰️</span>
+                        <span class="privacy-text">Salários</span>
+                    </button>
+
+                    <button class="privacy-toggle-btn" onclick="toggleVidasPorSecao('${roleId}')">
+                        <span class="privacy-icon">❤</span>
+                        <span class="privacy-text">Vidas</span>
+                    </button>
+                </div>
+
             </div>
         `;
+
         roleSection.innerHTML = roleTitleHtml;
 
         // 3b. Cria o contêiner de rolagem (Netflix style)
@@ -1603,18 +1619,29 @@ function renderTeamCards(data) {
 
                     <div class="card-content">
                         <div class="info-list">
+
                             <div class="info-item">
                                 <span class="info-label">Clientes</span>
                                 <span class="info-value">${member.CLIENTES_TOTAIS}</span>
                             </div>
+
                             <div class="info-item">
                                 <span class="info-label">Grupos</span>
                                 <span class="info-value">${member.GRUPOS_DISTINTOS || 0}</span>
                             </div>
+
                             <div class="info-item">
                                 <span class="info-label">Faturamento</span>
                                 <span class="info-value currency-value">${faturamentoFormatado}</span>
                             </div>
+
+                            ${vidasVisiveis ? `
+                            <div class="info-item">
+                                <span class="info-label">♥ Vidas</span>
+                                <span class="info-value">${member.VIDAS_TOTAL || 0}</span>
+                            </div>
+                            ` : ''}
+
                         </div>
                     </div>
                 </div>
@@ -1760,7 +1787,25 @@ function renderModals(data) {
             ? Math.round(ranksTotais.reduce((sum, r) => sum + r, 0) / ranksTotais.length)
             : 0;
 
+        let rankClass = "rank-default";
+        let rankEmoji = "";
 
+        if (rankMedio === 1) {
+            rankClass = "rank-gold";
+            rankEmoji = "🥇";
+        } 
+        else if (rankMedio === 2) {
+            rankClass = "rank-silver";
+            rankEmoji = "🥈";
+        }
+        else if (rankMedio === 3) {
+            rankClass = "rank-bronze";
+            rankEmoji = "🥉";
+        }
+
+        member.VIDAS_TOTAL = clientData
+            .filter(c => (c.Responsável || c.Responsavel || c['responsavel']) === member.NOME)
+            .reduce((sum, c) => sum + (parseInt(c.Vidas) || 0), 0);
 
 
         const maxCount = Math.max(complexidadeCounts['A'], complexidadeCounts['B'], complexidadeCounts['C']);
@@ -1804,8 +1849,9 @@ function renderModals(data) {
                         </div>
                     </div>
                     <p class="rank-info">${pontuacaoTotal} pontos</p>
-                    <p class="rank-info">Rank ${rankMedio}/${rankTotalMedio}</p>
-
+                    <p class="rank-info ${rankClass}">
+                        ${rankEmoji} Rank ${rankMedio}/${rankTotalMedio}
+                    </p>
                 </div>
             </div>
         `;

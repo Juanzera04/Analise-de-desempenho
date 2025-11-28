@@ -618,11 +618,30 @@ h1 {
 }
 
 .rank-info {
-    font-size: 1rem;          /* aumenta a fonte */
-    color: #fff;           /* muda a cor */
-    font-weight: 600;         /* opcional: deixa mais forte */
+    font-size: 0.8rem;
     text-align: center;
-    margin-top: 5px;
+    margin-top: 3px;
+    font-weight: 600;
+}
+
+/* 🥇 Ouro */
+.rank-gold {
+    color: #FFD700;
+}
+
+/* 🥈 Prata */
+.rank-silver {
+    color: #C0C0C0;
+}
+
+/* 🥉 Bronze */
+.rank-bronze {
+    color: #CD7F32;
+}
+
+/* Demais posições */
+.rank-default {
+    color: var(--dark-secondary-text);
 }
 
 /* ============================================= */
