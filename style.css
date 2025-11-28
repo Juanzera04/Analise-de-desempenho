@@ -619,7 +619,7 @@ h1 {
 
 .rank-info {
     font-size: 1rem;          /* aumenta a fonte */
-    color: #00ff88;           /* muda a cor */
+    color: #fff;           /* muda a cor */
     font-weight: 600;         /* opcional: deixa mais forte */
     text-align: center;
     margin-top: 5px;
