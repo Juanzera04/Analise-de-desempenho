@@ -471,7 +471,7 @@ function renderizarModalTime(timeNum, member) {
     // ============================
     let stat3HTML = "";
 
-    if (m.DEPARTAMENTO === "DP - DEPTO PESSOAL") {
+    if (m.DEPARTAMENTO === "DP - DEPTO. PESSOAL") {
         const clientesDoColab = clientData.filter(c =>
             (c.Responsável || c.Responsavel || c["responsavel"]) === m.NOME
         );
@@ -1834,7 +1834,7 @@ function renderModals(data) {
         let stat3Display = '';   // string final que aparecerá no modal
         let stat3Trend = '';     // possível seta/indicador
 
-        if (member.DEPARTAMENTO === "DP - DEPTO PESSOAL") {
+        if (member.DEPARTAMENTO === "DP - DEPTO. PESSOAL") {
 
             const clientesDoColab = clientData.filter(c =>
                 (c.Responsável || c.Responsavel || c['responsavel']) === member.NOME
