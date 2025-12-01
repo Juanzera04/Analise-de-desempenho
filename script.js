@@ -674,19 +674,36 @@ function calcularDadosFiltrados(member, competenciaFiltro) {
         if (memberFiltrado.COMPLEXIDADE_COUNT[cx] !== undefined) memberFiltrado.COMPLEXIDADE_COUNT[cx]++;
     });
 
-    const statusItem = tarefasFiltradas[0]; // cada colaborador tem 1 linha agrupada
-    memberFiltrado.PROGRESSO_VALOR = statusItem?.Status || "0%";
+    // NOVO: Calcula o percentual de progresso diretamente da coluna Status
+    let progressoTotal = 0;
+    let tarefasComPercentual = 0;
+    
+    tarefasFiltradas.forEach(tarefa => {
+        const statusValue = tarefa.Status || '0%';
+        // Extrai o número do percentual (ex: "40%" → 40)
+        const percentMatch = statusValue.toString().match(/(\d+(\.\d+)?)%/);
+        if (percentMatch) {
+            progressoTotal += parseFloat(percentMatch[1]);
+            tarefasComPercentual++;
+        } else if (!isNaN(parseFloat(statusValue))) {
+            // Se for apenas um número sem o símbolo %
+            progressoTotal += parseFloat(statusValue);
+            tarefasComPercentual++;
+        }
+    });
 
-    const percentage = memberFiltrado.TAREFAS_TOTAIS > 0
-        ? Math.round((memberFiltrado.TAREFAS_CONCLUIDAS / memberFiltrado.TAREFAS_TOTAIS) * 100)
+    // Calcula a média dos percentuais
+    const progressoMedio = tarefasComPercentual > 0 
+        ? Math.round(progressoTotal / tarefasComPercentual)
         : 0;
-    memberFiltrado.PROGRESSO_VALOR = percentage;
-    memberFiltrado.TAREFAS_COMPLETAS = memberFiltrado.TAREFAS_CONCLUIDAS;
+    
+    memberFiltrado.PROGRESSO_VALOR = progressoMedio;
+    memberFiltrado.TAREFAS_TOTAIS = tarefasFiltradas.length;
 
     const gruposDistintos = new Set(clientesFiltrados.map(c => c.Grupo || c.grupo)).size;
     memberFiltrado.STAT_2_VALOR = gruposDistintos;
 
-    memberFiltrado.DESCRICAO = `Clientes: ${memberFiltrado.CLIENTES_TOTAIS} | Pendências: ${memberFiltrado.TAREFAS_PENDENTES} | Faturamento: ${new Intl.NumberFormat('pt-BR', {
+    memberFiltrado.DESCRICAO = `Clientes: ${memberFiltrado.CLIENTES_TOTAIS} | Status: ${progressoMedio}% | Faturamento: ${new Intl.NumberFormat('pt-BR', {
         style: 'currency',
         currency: 'BRL',
         minimumFractionDigits: 0
@@ -1074,8 +1091,7 @@ function aggregateData() {
             COMPLEXIDADE_COUNT: { 'A': 0, 'B': 0, 'C': 0 },
             FATURAMENTO_TOTAL: 0,
             CLIENTES_TOTAIS: 0,
-            TAREFAS_CONCLUIDAS: 0,
-            TAREFAS_PENDENTES: 0,
+            STATUS_PERCENTUAL: 0, // NOVO CAMPO
             VIDAS_TOTAL: 0,
         });
     });
@@ -1096,13 +1112,12 @@ function aggregateData() {
         teamMember.CLIENTES_TOTAIS += 1;
         teamMember.VIDAS_TOTAL += parseInt(client.Vidas || client.Vidas || 0) || 0;
 
-
         if (complexidade && teamMember.COMPLEXIDADE_COUNT.hasOwnProperty(complexidade.toUpperCase())) {
             teamMember.COMPLEXIDADE_COUNT[complexidade.toUpperCase()]++;
         }
     });
 
-    // 3. Agrega dados de TAREFAS
+    // 3. Agrega dados de TAREFAS (AGORA PEGA O PERCENTUAL DIRETO)
     taskData.forEach(task => {
         const resp = task.Responsável || task.Responsavel || task['responsavel'];
         if (!responsibleMap.has(resp)) return;
@@ -1112,11 +1127,18 @@ function aggregateData() {
 
         if (competencia && String(competencia).trim() !== '') teamMember.COMPETENCIAS.add(String(competencia).trim());
 
-        if (task.Status && String(task.Status).toLowerCase().includes('concluíd')) {
-            teamMember.TAREFAS_CONCLUIDAS++;
-        } else if (task.Status && String(task.Status).toLowerCase().includes('pendente')) {
-            teamMember.TAREFAS_PENDENTES++;
+        // PEGA O VALOR DO STATUS (que já é o percentual)
+        const statusValue = task.Status || '0%';
+        // Extrai o número do percentual
+        const percentMatch = statusValue.toString().match(/(\d+(\.\d+)?)%/);
+        if (percentMatch) {
+            teamMember.STATUS_PERCENTUAL = parseFloat(percentMatch[1]);
+        } else if (!isNaN(parseFloat(statusValue))) {
+            // Se for apenas um número
+            teamMember.STATUS_PERCENTUAL = parseFloat(statusValue);
         }
+        // Nota: se houver múltiplas tarefas, isso sobrescreverá com a última
+        // Se precisar de média, você precisará acumular e dividir
     });
 
     // 4. Monta o array final
@@ -1124,16 +1146,9 @@ function aggregateData() {
 
     return aggregated.map(member => {
         const competenciasArray = Array.from(member.COMPETENCIAS);
-        const tarefasTotais = member.TAREFAS_CONCLUIDAS + member.TAREFAS_PENDENTES;
-        // --- PROGRESSO VINDO DIRETO DA BASE (Status) ---
-        let percentage = 0;
-
-        if (member.TAREFAS_CONCLUIDAS > 0) {
-            percentage = 100;
-        } else {
-            percentage = 0;
-        }
-
+        
+        // USA O VALOR DIRETO DO STATUS
+        const progressPercentage = member.STATUS_PERCENTUAL || 0;
 
         const gruposDistintos = new Set(
             clientData.filter(c => {
@@ -1154,12 +1169,11 @@ function aggregateData() {
             COMPETENCIAS: competenciasArray,
             CLIENTES_TOTAIS: clientesTotais,
             GRUPOS_DISTINTOS: gruposDistintos,
-            DESCRICAO: `Clientes: ${clientesTotais} | Pendências: ${member.TAREFAS_PENDENTES} | Faturamento: ${new Intl.NumberFormat('pt-BR', {
+            DESCRICAO: `Clientes: ${clientesTotais} | Status: ${progressPercentage}% | Faturamento: ${new Intl.NumberFormat('pt-BR', {
                 style: 'currency',
                 currency: 'BRL',
                 minimumFractionDigits: 0
             }).format(member.FATURAMENTO_TOTAL)}`,
-            TAREFAS_TOTAIS: tarefasTotais,
             SALARIO: salarioFormatado,
             STAT_1_TITULO: 'Clientes',
             STAT_1_VALOR: clientesTotais,
@@ -1168,7 +1182,7 @@ function aggregateData() {
             STAT_3_TITULO: 'Faturamento',
             STAT_3_VALOR: member.FATURAMENTO_TOTAL,
             PROGRESSO_TITULO: 'Qualidade das entregas',
-            PROGRESSO_VALOR: percentage
+            PROGRESSO_VALOR: progressPercentage // USA O VALOR DIRETO
         };
     });
 }
@@ -1311,9 +1325,9 @@ function recalculateAggregations(filteredCollaborators) {
             COMPLEXIDADE_COUNT: { 'A': 0, 'B': 0, 'C': 0 },
             FATURAMENTO_TOTAL: 0,
             CLIENTES_TOTAIS: 0,
-            TAREFAS_CONCLUIDAS: 0,
-            TAREFAS_PENDENTES: 0,
-            COMPETENCIAS: new Set()
+            COMPETENCIAS: new Set(),
+            // REMOVER OS CÁLCULOS DE TAREFAS
+            STATUS_PERCENTUAL: 0 // NOVO CAMPO PARA ARMAZENAR O PERCENTUAL DIRETO
         });
     });
 
@@ -1322,7 +1336,7 @@ function recalculateAggregations(filteredCollaborators) {
         const resp = client.Responsável || client.Responsavel || client['responsavel'];
         const competencia = client.Competência || client.Competencia || client['competencia'];
         if (!collaboratorMap.has(resp)) return;
-        if (filterCompetencia && competencia !== filterCompetencia) return; // <<-- agora filtra corretamente
+        if (filterCompetencia && competencia !== filterCompetencia) return;
 
         const member = collaboratorMap.get(resp);
         const faturamento = parseCurrency(client.Faturamento || client.faturamento || 0);
@@ -1330,14 +1344,14 @@ function recalculateAggregations(filteredCollaborators) {
 
         if (competencia) member.COMPETENCIAS.add(String(competencia).trim());
         member.CLIENTES_TOTAIS++;
-        member.FATURAMENTO_TOTAL += faturamento; // <<-- faturamento respeita o filtro agora
+        member.FATURAMENTO_TOTAL += faturamento;
 
         if (complexidade && member.COMPLEXIDADE_COUNT.hasOwnProperty(complexidade.toUpperCase())) {
             member.COMPLEXIDADE_COUNT[complexidade.toUpperCase()]++;
         }
     });
 
-    // Recalcula TAREFAS filtradas
+    // CALCULAR PERCENTUAL DE STATUS DAS TAREFAS (AGORA É O VALOR DIRETO)
     taskData.forEach(task => {
         const resp = task.Responsável || task.Responsavel || task['responsavel'];
         const competencia = task.Competência || task.Competencia || task['competencia'];
@@ -1346,16 +1360,24 @@ function recalculateAggregations(filteredCollaborators) {
 
         const member = collaboratorMap.get(resp);
         if (competencia) member.COMPETENCIAS.add(String(competencia).trim());
-
-        if (task.Status && String(task.Status).toLowerCase().includes('concluíd')) member.TAREFAS_CONCLUIDAS++;
-        else if (task.Status && String(task.Status).toLowerCase().includes('pendente')) member.TAREFAS_PENDENTES++;
+        
+        // AGORA PEGA O VALOR DIRETO DA CÉLULA DE STATUS (que já é o percentual)
+        const statusValue = task.Status || '0%';
+        // Extrai o número do percentual (ex: "40%" → 40)
+        const percentMatch = statusValue.toString().match(/(\d+(\.\d+)?)%/);
+        if (percentMatch) {
+            member.STATUS_PERCENTUAL = parseFloat(percentMatch[1]);
+        } else if (!isNaN(parseFloat(statusValue))) {
+            // Se for apenas um número sem o símbolo %
+            member.STATUS_PERCENTUAL = parseFloat(statusValue);
+        }
+        // Se houver múltiplas tarefas, você pode querer calcular a média
+        // Mas pelo que entendi, você já traz o valor consolidado
     });
 
     // Monta resultado final
     return Array.from(collaboratorMap.values()).map(member => {
         const competenciasArray = Array.from(member.COMPETENCIAS);
-        const tarefasTotais = member.TAREFAS_CONCLUIDAS + member.TAREFAS_PENDENTES;
-        const percentage = tarefasTotais > 0 ? Math.round((member.TAREFAS_CONCLUIDAS / tarefasTotais) * 100) : 0;
 
         const gruposDistintos = new Set(
             clientData
@@ -1381,12 +1403,12 @@ function recalculateAggregations(filteredCollaborators) {
             ...member,
             COMPETENCIAS: competenciasArray,
             CLIENTES_TOTAIS: clientesTotaisFiltrados,
-            DESCRICAO: `Clientes: ${clientesTotaisFiltrados} | Pendências: ${member.TAREFAS_PENDENTES} | Faturamento: ${new Intl.NumberFormat('pt-BR', {
+            DESCRICAO: `Clientes: ${clientesTotaisFiltrados} | Status: ${member.STATUS_PERCENTUAL || 0}% | Faturamento: ${new Intl.NumberFormat('pt-BR', {
                 style: 'currency',
                 currency: 'BRL',
                 minimumFractionDigits: 0
             }).format(member.FATURAMENTO_TOTAL)}`,
-            TAREFAS_TOTAIS: tarefasTotais,
+            GRUPOS_DISTINTOS: gruposDistintos,
             SALARIO: salarioFormatado,
             STAT_1_TITULO: 'Clientes',
             STAT_1_VALOR: clientesTotaisFiltrados,
@@ -1395,7 +1417,7 @@ function recalculateAggregations(filteredCollaborators) {
             STAT_3_TITULO: 'Faturamento',
             STAT_3_VALOR: member.FATURAMENTO_TOTAL,
             PROGRESSO_TITULO: 'Qualidade das entregas',
-            PROGRESSO_VALOR: percentage
+            PROGRESSO_VALOR: member.STATUS_PERCENTUAL || 0 // USA O VALOR DIRETO
         };
     });
 }
@@ -1822,8 +1844,10 @@ function renderModals(data) {
     container.innerHTML = '';
 
     data.forEach(member => {
+        // Usa o HEX direto do JS para o background do perfil no modal
         const color = roleStripColorMap[member.CARGO] || roleStripColorMap['Outros'];
 
+        // Define o conteúdo do perfil no modal (Imagem ou Inicial)
         let profileContent;
         if (member.FOTO_URL && member.FOTO_URL !== 'N/A') {
             profileContent = `<img class="profile-image" src="${member.FOTO_URL}" alt="${member.NOME}">`;
@@ -1831,10 +1855,33 @@ function renderModals(data) {
             profileContent = member.INICIAL;
         }
 
+        // NOVO: Calcula o percentual de progresso baseado na coluna Status das tarefas
+        let progressoTotal = 0;
+        let tarefasComPercentual = 0;
+        
+        const tarefasColab = taskData.filter(t => 
+            (t.Responsável || t.Responsavel || t['responsavel']) === member.NOME
+        );
+        
+        tarefasColab.forEach(tarefa => {
+            const statusValue = tarefa.Status || '0%';
+            const percentMatch = statusValue.toString().match(/(\d+(\.\d+)?)%/);
+            if (percentMatch) {
+                progressoTotal += parseFloat(percentMatch[1]);
+                tarefasComPercentual++;
+            } else if (!isNaN(parseFloat(statusValue))) {
+                progressoTotal += parseFloat(statusValue);
+                tarefasComPercentual++;
+            }
+        });
+        
+        const progressoMedio = tarefasComPercentual > 0 
+            ? Math.round(progressoTotal / tarefasComPercentual)
+            : member.PROGRESSO_VALOR || 0;
+
         let stat3HTML = '';
 
         if (member.DEPARTAMENTO === "DP - DEPTO. PESSOAL") {
-
             const clientesDoColab = clientData.filter(c =>
                 (c.Responsável || c.Responsavel || c['responsavel']) === member.NOME
             );
@@ -1857,7 +1904,6 @@ function renderModals(data) {
                     <div class="stat-value">${demissoesTotal.toLocaleString('pt-BR')}</div>
                 </div>
             `;
-
         } else {
             const faturamentoFormatado = new Intl.NumberFormat('pt-BR', {
                 style: 'currency',
@@ -1889,33 +1935,22 @@ function renderModals(data) {
             </div>
         `;
 
-        // --- PROGRESSO VINDO DIRETO DA BASE ---
-        const progressoStr = member.PROGRESSO_VALOR || "0%";
-        const progressoNum = parseInt(progressoStr.replace("%", "")) || 0;
-
-        const finalProgressPercentage = progressoNum;
-        const finalProgressAngle = (progressoNum / 100) * 360;
-
+        // Usa o progresso médio calculado
+        const finalProgressPercentage = progressoMedio;
+        const finalProgressAngle = (finalProgressPercentage / 100) * 360;
         const complexidadeCounts = member.COMPLEXIDADE_COUNT;
-        const totalClients = member.CLIENTES_TOTAIS;
-        const totalTasks = member.TAREFAS_TOTAIS;
-
-        const pontuacaoTotal = taskData
-            .filter(t => (t.Responsável || t.Responsavel || t['responsavel']) === member.NOME)
-            .reduce((sum, t) => sum + (parseInt(t.Pontuação) || 0), 0);
-
-        const ranks = taskData.filter(t =>
-            (t.Responsável || t.Responsavel || t['responsavel']) === member.NOME
-        ).map(t => parseInt(t.Rank) || 0);
-
+        
+        // NOVO: Calcula pontuação total das tarefas
+        const pontuacaoTotal = tarefasColab.reduce((sum, t) => sum + (parseInt(t.Pontuação) || 0), 0);
+        
+        // RANK MÉDIO DO COLABORADOR
+        const ranks = tarefasColab.map(t => parseInt(t.Rank) || 0);
         const rankMedio = ranks.length > 0
             ? Math.round(ranks.reduce((sum, r) => sum + r, 0) / ranks.length)
             : 0;
 
-        const ranksTotais = taskData.filter(t =>
-            (t.Responsável || t.Responsavel || t['responsavel']) === member.NOME
-        ).map(t => parseInt(t["Rank Total"]) || 0);
-
+        // RANK TOTAL MÉDIO
+        const ranksTotais = tarefasColab.map(t => parseInt(t["Rank Total"]) || 0);
         const rankTotalMedio = ranksTotais.length > 0
             ? Math.round(ranksTotais.reduce((sum, r) => sum + r, 0) / ranksTotais.length)
             : 0;
@@ -1926,12 +1961,10 @@ function renderModals(data) {
         if (rankMedio === 1) {
             rankClass = "rank-gold";
             rankEmoji = "🥇";
-        } 
-        else if (rankMedio === 2) {
+        } else if (rankMedio === 2) {
             rankClass = "rank-silver";
             rankEmoji = "🥈";
-        }
-        else if (rankMedio === 3) {
+        } else if (rankMedio === 3) {
             rankClass = "rank-bronze";
             rankEmoji = "🥉";
         }
@@ -1969,7 +2002,6 @@ function renderModals(data) {
                         </div>
                     </div>
                 </div>
-
                 <div class="complexity-column">
                     <div class="section-title">${member.PROGRESSO_TITULO}</div>
                     <div class="quality-chart-container">
@@ -1993,6 +2025,7 @@ function renderModals(data) {
             <div class="modal-buttons-container">
                 <button class="${btnClass}" onclick="abrirClientesSidebar('${member.ID}')">
                     Clientes
+                    ${filterCompetencia ? '' : ''}
                 </button>
                 <button class="${compararBtnClass}" onclick="abrirCompararSidebar('${member.ID}')">
                     Comparar
@@ -2004,7 +2037,6 @@ function renderModals(data) {
             <div id="${member.ID}-modal" class="modal">
                 <div class="modal-content" id="${member.ID}-modal-content">
                     <span class="close-btn" onclick="closeModal('${member.ID}')">&times;</span>
-                    
                     <div class="employee-profile">
                         <div class="profile-pic" style="background-color: ${color};">
                             ${profileContent}
@@ -2021,7 +2053,9 @@ function renderModals(data) {
                     </div>
                     
                     ${statsRowHTML}
+                    
                     ${complexityBarsHTML}
+                    
                     ${modalButtonsHTML}
                     
                 </div>
