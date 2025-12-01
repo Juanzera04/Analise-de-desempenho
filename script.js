@@ -1814,10 +1814,8 @@ function renderModals(data) {
     container.innerHTML = '';
 
     data.forEach(member => {
-        // Usa o HEX direto do JS para o background do perfil no modal
         const color = roleStripColorMap[member.CARGO] || roleStripColorMap['Outros'];
 
-        // Define o conteúdo do perfil no modal (Imagem ou Inicial)
         let profileContent;
         if (member.FOTO_URL && member.FOTO_URL !== 'N/A') {
             profileContent = `<img class="profile-image" src="${member.FOTO_URL}" alt="${member.NOME}">`;
@@ -1825,9 +1823,7 @@ function renderModals(data) {
             profileContent = member.INICIAL;
         }
 
-        let stat3Titulo = member.STAT_3_TITULO;
-        let stat3Display = '';   // string final que aparecerá no modal
-        let stat3Trend = '';     // possível seta/indicador
+        let stat3HTML = '';
 
         if (member.DEPARTAMENTO === "DP - DEPTO. PESSOAL") {
 
@@ -1855,7 +1851,6 @@ function renderModals(data) {
             `;
 
         } else {
-            // MODO NORMAL — usa faturamento já existente
             const faturamentoFormatado = new Intl.NumberFormat('pt-BR', {
                 style: 'currency',
                 currency: 'BRL',
@@ -1871,7 +1866,7 @@ function renderModals(data) {
                 </div>
             `;
         }
-        // depois, no statsRowHTML, substitua as referências por:
+
         const statsRowHTML = `
             <div class="stats-row">
                 <div class="stat-item">
@@ -1889,14 +1884,18 @@ function renderModals(data) {
         // --- PROGRESSO VINDO DIRETO DA BASE ---
         const progressoStr = member.PROGRESSO_VALOR || "0%";
         const progressoNum = parseInt(progressoStr.replace("%", "")) || 0;
+
         const finalProgressPercentage = progressoNum;
         const finalProgressAngle = (progressoNum / 100) * 360;
 
         const complexidadeCounts = member.COMPLEXIDADE_COUNT;
+        const totalClients = member.CLIENTES_TOTAIS;
+        const totalTasks = member.TAREFAS_TOTAIS;
+
         const pontuacaoTotal = taskData
             .filter(t => (t.Responsável || t.Responsavel || t['responsavel']) === member.NOME)
             .reduce((sum, t) => sum + (parseInt(t.Pontuação) || 0), 0);
-        // RANK MÉDIO DO COLABORADOR
+
         const ranks = taskData.filter(t =>
             (t.Responsável || t.Responsavel || t['responsavel']) === member.NOME
         ).map(t => parseInt(t.Rank) || 0);
@@ -1905,7 +1904,6 @@ function renderModals(data) {
             ? Math.round(ranks.reduce((sum, r) => sum + r, 0) / ranks.length)
             : 0;
 
-        // RANK TOTAL MÉDIO
         const ranksTotais = taskData.filter(t =>
             (t.Responsável || t.Responsavel || t['responsavel']) === member.NOME
         ).map(t => parseInt(t["Rank Total"]) || 0);
@@ -1963,6 +1961,7 @@ function renderModals(data) {
                         </div>
                     </div>
                 </div>
+
                 <div class="complexity-column">
                     <div class="section-title">${member.PROGRESSO_TITULO}</div>
                     <div class="quality-chart-container">
@@ -1978,7 +1977,6 @@ function renderModals(data) {
             </div>
         `;
 
-        // Na função renderModals, substitua a parte dos botões por:
         const filterCompetencia = document.getElementById('filter-competencia').value;
         const btnClass = filterCompetencia ? 'ver-clientes-btn filtro-ativo' : 'ver-clientes-btn';
         const compararBtnClass = filterCompetencia ? 'comparar-btn filtro-ativo' : 'comparar-btn';
@@ -1987,17 +1985,18 @@ function renderModals(data) {
             <div class="modal-buttons-container">
                 <button class="${btnClass}" onclick="abrirClientesSidebar('${member.ID}')">
                     Clientes
-                    ${filterCompetencia ? '' : ''}
                 </button>
                 <button class="${compararBtnClass}" onclick="abrirCompararSidebar('${member.ID}')">
                     Comparar
                 </button>
             </div>
         `;
+
         const modalHtml = `
             <div id="${member.ID}-modal" class="modal">
                 <div class="modal-content" id="${member.ID}-modal-content">
                     <span class="close-btn" onclick="closeModal('${member.ID}')">&times;</span>
+                    
                     <div class="employee-profile">
                         <div class="profile-pic" style="background-color: ${color};">
                             ${profileContent}
@@ -2014,23 +2013,13 @@ function renderModals(data) {
                     </div>
                     
                     ${statsRowHTML}
-                    
                     ${complexityBarsHTML}
-                    
                     ${modalButtonsHTML}
                     
                 </div>
             </div>
         `;
-        // MODIFICAÇÃO: Adiciona classe condicional para salário no modal
-        const classeSalarioModal = salariosVisiveis ? '' : 'salario-oculto';
-        
-        // SEMPRE MOSTRA SALÁRIO NO MODAL (visualização detalhada)
-        const profileAdmissionsHTML = `
-            <div class="profile-admissions">
-                <span>Desde: ${member.DATA_ADMISSAO} | Salário: <span class="salary">R$ ${member.SALARIO}</span></span>
-            </div>
-        `;
+
         container.innerHTML += modalHtml;
     });
 }
