@@ -1125,7 +1125,15 @@ function aggregateData() {
     return aggregated.map(member => {
         const competenciasArray = Array.from(member.COMPETENCIAS);
         const tarefasTotais = member.TAREFAS_CONCLUIDAS + member.TAREFAS_PENDENTES;
-        const percentage = tarefasTotais > 0 ? Math.round((member.TAREFAS_CONCLUIDAS / tarefasTotais) * 100) : 0;
+        // --- PROGRESSO VINDO DIRETO DA BASE (Status) ---
+        let percentage = 0;
+
+        if (member.TAREFAS_CONCLUIDAS > 0) {
+            percentage = 100;
+        } else {
+            percentage = 0;
+        }
+
 
         const gruposDistintos = new Set(
             clientData.filter(c => {
