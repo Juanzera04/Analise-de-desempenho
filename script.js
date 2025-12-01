@@ -1427,7 +1427,7 @@ function filterCards() {
     const filterUnidade = document.getElementById('filter-unidade').value;
     const filterDepartamento = document.getElementById('filter-departamento').value;
     const filterCompetencia = document.getElementById('filter-competencia').value;
-
+    
     console.log('Filtros aplicados:', {
         unidade: filterUnidade,
         departamento: filterDepartamento,
@@ -1484,6 +1484,11 @@ function filterCards() {
     
     // 4. Renderiza os cards com os dados recalculados
     renderTeamCards(recalculatedData);
+
+    const rankingSection = document.getElementById('ranking-section');
+    if (rankingSection && rankingSection.style.display !== 'none') {
+        renderizarRanking();
+    }
 }
 
 /**
@@ -2523,6 +2528,166 @@ function getClientesDoColaborador(nomeColaborador) {
 
 }
 
+// =============================================
+// FUNÇÕES DE RANKING
+// =============================================
+
+/**
+ * Alterna a visibilidade da seção de ranking
+ */
+function toggleRanking() {
+    const rankingSection = document.getElementById('ranking-section');
+    const rankingBtn = document.getElementById('ranking-btn');
+    
+    if (rankingSection.style.display === 'none') {
+        rankingSection.style.display = 'block';
+        rankingBtn.textContent = '✕ Ocultar Ranking';
+        rankingBtn.classList.add('active');
+        renderizarRanking();
+    } else {
+        rankingSection.style.display = 'none';
+        rankingBtn.textContent = '📊 Mostrar Ranking';
+        rankingBtn.classList.remove('active');
+    }
+}
+
+/**
+ * Renderiza o ranking dos colaboradores
+ */
+function renderizarRanking() {
+    const rankingGrid = document.getElementById('ranking-grid');
+    if (!rankingGrid) return;
+    
+    // Obtém os dados atualmente filtrados
+    const searchTerm = document.getElementById('search-input').value.toLowerCase().trim();
+    const filterUnidade = document.getElementById('filter-unidade').value;
+    const filterDepartamento = document.getElementById('filter-departamento').value;
+    const filterCompetencia = document.getElementById('filter-competencia').value;
+    
+    // Aplica os mesmos filtros da tela principal
+    let colaboradoresFiltrados = teamData.filter(member => {
+        const matchesUnidade = !filterUnidade || member.UNIDADE === filterUnidade;
+        const matchesDepto = !filterDepartamento || member.DEPARTAMENTO === filterDepartamento;
+        const matchesCompetencia = !filterCompetencia || 
+            (member.COMPETENCIAS && member.COMPETENCIAS.includes(filterCompetencia));
+        
+        return matchesUnidade && matchesDepto && matchesCompetencia;
+    });
+    
+    // Aplica filtro de busca
+    if (searchTerm !== '') {
+        colaboradoresFiltrados = colaboradoresFiltrados.filter(member => {
+            const memberDepartment = member.DEPARTAMENTO.toLowerCase().trim();
+            const memberRole = member.CARGO.toLowerCase().trim();
+            const memberName = member.NOME.toLowerCase().trim();
+            const memberUnit = member.UNIDADE ? member.UNIDADE.toLowerCase().trim() : '';
+            const memberCompetencias = member.COMPETENCIAS ? 
+                member.COMPETENCIAS.map(c => c.toLowerCase()).join(' ') : '';
+            
+            const searchableText = [
+                memberName,
+                memberRole,
+                memberDepartment,
+                memberUnit,
+                memberCompetencias
+            ].join(' ');
+            
+            return searchableText.includes(searchTerm);
+        });
+    }
+    
+    // Calcula o rank médio para cada colaborador
+    colaboradoresFiltrados.forEach(member => {
+        const tarefasColab = taskData.filter(t => 
+            (t.Responsável || t.Responsavel || t['responsavel']) === member.NOME
+        );
+        
+        const ranks = tarefasColab.map(t => parseInt(t.Rank) || 0);
+        member.RANK_MEDIO = ranks.length > 0 
+            ? Math.round(ranks.reduce((sum, r) => sum + r, 0) / ranks.length)
+            : 0;
+    });
+    
+    // Ordena pelo rank médio (menor valor = melhor posição)
+    colaboradoresFiltrados.sort((a, b) => {
+        // Se ambos têm rank 0, ordena por faturamento
+        if (a.RANK_MEDIO === 0 && b.RANK_MEDIO === 0) {
+            return b.FATURAMENTO_TOTAL - a.FATURAMENTO_TOTAL;
+        }
+        // Se um tem rank 0 e outro não, o com rank definido vem primeiro
+        if (a.RANK_MEDIO === 0) return 1;
+        if (b.RANK_MEDIO === 0) return -1;
+        // Ordena pelo rank (menor = melhor)
+        return a.RANK_MEDIO - b.RANK_MEDIO;
+    });
+    
+    // Renderiza os cards de ranking
+    if (colaboradoresFiltrados.length === 0) {
+        rankingGrid.innerHTML = `
+            <div class="ranking-card" style="grid-column: 1 / -1; text-align: center; padding: 30px;">
+                <p style="color: var(--dark-secondary-text);">Nenhum colaborador encontrado com os filtros atuais.</p>
+            </div>
+        `;
+        return;
+    }
+    
+    let rankingHTML = '';
+    
+    colaboradoresFiltrados.forEach((member, index) => {
+        const posicao = index + 1;
+        
+        // Determina a classe da posição
+        let posicaoClass = 'outros';
+        let posicaoEmoji = '';
+        
+        if (posicao === 1) {
+            posicaoClass = 'ouro';
+            posicaoEmoji = '🥇';
+        } else if (posicao === 2) {
+            posicaoClass = 'prata';
+            posicaoEmoji = '🥈';
+        } else if (posicao === 3) {
+            posicaoClass = 'bronze';
+            posicaoEmoji = '🥉';
+        }
+        
+        // Usa a mesma cor do cargo
+        const color = roleStripColorMap[member.CARGO] || roleStripColorMap['Outros'];
+        
+        // Foto ou inicial
+        const fotoContent = (member.FOTO_URL && member.FOTO_URL !== 'N/A')
+            ? `<img src="${member.FOTO_URL}" alt="${member.NOME}">`
+            : member.INICIAL;
+        
+        rankingHTML += `
+            <div class="ranking-card" onclick="openModal('${member.ID}')">
+                <div class="ranking-posicao ${posicaoClass}" style="border: 2px solid ${color};">
+                    ${posicao}${posicaoEmoji}
+                </div>
+                <div class="ranking-info">
+                    <h3 class="ranking-nome">${member.NOME}</h3>
+                    <p class="ranking-departamento">${member.DEPARTAMENTO}</p>
+                    <p class="ranking-cargo">${member.CARGO_CARTEIRA || 'N/A'}</p>
+                </div>
+                <div class="ranking-foto" style="background: ${color};">
+                    ${fotoContent}
+                </div>
+            </div>
+        `;
+    });
+    
+    rankingGrid.innerHTML = rankingHTML;
+}
+
+/**
+ * Atualiza o ranking quando os filtros mudam
+ */
+function atualizarRankingComFiltros() {
+    const rankingSection = document.getElementById('ranking-section');
+    if (rankingSection.style.display !== 'none') {
+        renderizarRanking();
+    }
+}
 
 
 // ----------------------------------------------------------------------
@@ -2531,27 +2696,38 @@ function getClientesDoColaborador(nomeColaborador) {
 
 // No final do script.js, adicione:
 document.addEventListener('DOMContentLoaded', () => {
-    loadAllCSVs();
-
+    // Configurar o botão de ranking
+    const rankingBtn = document.getElementById('ranking-btn');
+    if (rankingBtn) {
+        rankingBtn.addEventListener('click', toggleRanking);
+    }
+    
+    // Configurar os filtros para atualizar o ranking também
     const searchInput = document.getElementById('search-input');
     const unidadeSelect = document.getElementById('filter-unidade');
     const deptoSelect = document.getElementById('filter-departamento');
     const competenciaSelect = document.getElementById('filter-competencia');
-
+    
+    const atualizarTudo = () => {
+        filterCards();
+        atualizarRankingComFiltros();
+    };
+    
     if (searchInput) {
-        searchInput.addEventListener('input', filterCards);
+        searchInput.addEventListener('input', atualizarTudo);
     }
     
     if (unidadeSelect) {
-        unidadeSelect.addEventListener('change', filterCards);
-    }
-    if (deptoSelect) {
-        deptoSelect.addEventListener('change', filterCards);
-    }
-    if (competenciaSelect) {
-        competenciaSelect.addEventListener('change', filterCards);
+        unidadeSelect.addEventListener('change', atualizarTudo);
     }
     
+    if (deptoSelect) {
+        deptoSelect.addEventListener('change', atualizarTudo);
+    }
+    
+    if (competenciaSelect) {
+        competenciaSelect.addEventListener('change', atualizarTudo);
+    }    
     // INICIALIZA O BOTÃO DE PRIVACIDADE
     atualizarEstadoBotaoPrivacidade();
 });

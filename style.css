@@ -2031,3 +2031,246 @@ h1 {
     text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.3) !important;
 }
 
+
+/*============================
+/* ============================================= */
+/* HEADER COM BOTÃO DE RANKING */
+/* ============================================= */
+
+.header-container {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0 20px;
+    position: relative;
+}
+
+.ranking-btn {
+    background: linear-gradient(135deg, #ffd700, #ffed4e);
+    color: #333;
+    border: none;
+    padding: 10px 20px;
+    border-radius: 25px;
+    font-weight: bold;
+    font-size: 0.9rem;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    box-shadow: 0 4px 10px rgba(255, 215, 0, 0.3);
+    position: absolute;
+    left: 20px;
+    top: 50%;
+    transform: translateY(-50%);
+}
+
+.ranking-btn:hover {
+    background: linear-gradient(135deg, #ffed4e, #ffd700);
+    transform: translateY(-50%) scale(1.05);
+    box-shadow: 0 6px 15px rgba(255, 215, 0, 0.4);
+}
+
+.ranking-btn:active {
+    transform: translateY(-50%) scale(0.95);
+}
+
+.header-container h1 {
+    margin: 0 auto;
+    text-align: center;
+}
+
+/* ============================================= */
+/* SEÇÃO DE RANKING */
+/* ============================================= */
+
+.ranking-section {
+    margin-top: 30px;
+    background-color: var(--dark-card);
+    border-radius: 10px;
+    padding: 20px;
+    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.3);
+    border: 1px solid var(--modal-border);
+}
+
+.ranking-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 20px;
+    padding-bottom: 15px;
+    border-bottom: 2px solid var(--modal-border);
+}
+
+.ranking-header h2 {
+    color: var(--dark-text);
+    font-size: 1.5rem;
+    margin: 0;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.fechar-ranking-btn {
+    background-color: var(--modal-border);
+    color: var(--dark-text);
+    border: 1px solid var(--modal-border);
+    border-radius: 5px;
+    padding: 8px 15px;
+    cursor: pointer;
+    font-size: 0.9rem;
+    transition: all 0.3s ease;
+}
+
+.fechar-ranking-btn:hover {
+    background-color: #ef5350;
+    color: white;
+    border-color: #ef5350;
+}
+
+/* ============================================= */
+/* GRID DE RANKING */
+/* ============================================= */
+
+.ranking-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+    gap: 15px;
+}
+
+.ranking-card {
+    background-color: var(--dark-card);
+    border-radius: 10px;
+    overflow: hidden;
+    cursor: pointer;
+    transition: transform 0.2s, box-shadow 0.2s;
+    border: 2px solid transparent;
+    min-height: 120px;
+    display: flex;
+    align-items: center;
+    padding: 15px;
+    gap: 15px;
+}
+
+.ranking-card:hover {
+    transform: translateY(-3px);
+    box-shadow: 0 6px 15px rgba(0, 0, 0, 0.4);
+    border-color: lightblue;
+}
+
+/* Posição do ranking */
+.ranking-posicao {
+    width: 50px;
+    height: 50px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.2rem;
+    font-weight: bold;
+    flex-shrink: 0;
+    color: white;
+}
+
+/* Cores das posições */
+.ranking-posicao.ouro {
+    background: linear-gradient(135deg, #ffd700, #ffed4e);
+    color: #333;
+    box-shadow: 0 4px 10px rgba(255, 215, 0, 0.3);
+}
+
+.ranking-posicao.prata {
+    background: linear-gradient(135deg, #c0c0c0, #e0e0e0);
+    color: #333;
+    box-shadow: 0 4px 10px rgba(192, 192, 192, 0.3);
+}
+
+.ranking-posicao.bronze {
+    background: linear-gradient(135deg, #cd7f32, #e6a15c);
+    color: white;
+    box-shadow: 0 4px 10px rgba(205, 127, 50, 0.3);
+}
+
+.ranking-posicao.outros {
+    background: linear-gradient(135deg, var(--modal-border), var(--dark-secondary-text));
+    color: white;
+}
+
+/* Conteúdo do card de ranking */
+.ranking-info {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    gap: 5px;
+}
+
+.ranking-nome {
+    font-size: 1.1rem;
+    font-weight: bold;
+    color: var(--dark-text);
+    margin: 0;
+}
+
+.ranking-departamento {
+    font-size: 0.85rem;
+    color: var(--dark-secondary-text);
+    margin: 0;
+}
+
+.ranking-cargo {
+    font-size: 0.85rem;
+    color: var(--dark-text);
+    font-weight: 500;
+    margin: 0;
+}
+
+/* Foto no ranking */
+.ranking-foto {
+    width: 60px;
+    height: 60px;
+    border-radius: 50%;
+    overflow: hidden;
+    flex-shrink: 0;
+    border: 2px solid white;
+    background-color: #383838;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.2rem;
+    font-weight: bold;
+    color: white;
+}
+
+.ranking-foto img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+}
+
+/* Estilos responsivos */
+@media (max-width: 768px) {
+    .header-container {
+        flex-direction: column;
+        gap: 15px;
+        padding: 15px 0;
+    }
+    
+    .ranking-btn {
+        position: static;
+        transform: none;
+        margin-bottom: 10px;
+    }
+    
+    .header-container h1 {
+        order: -1;
+        margin-bottom: 10px;
+    }
+    
+    .ranking-grid {
+        grid-template-columns: 1fr;
+    }
+    
+    .ranking-card {
+        padding: 12px;
+    }
+}

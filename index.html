@@ -12,7 +12,12 @@
 </head>
 <body>
     <header>
-        <h1>Análise de desempenho</h1>
+        <div class="header-container">
+            <button id="ranking-btn" class="ranking-btn">
+                📊 Mostrar Ranking
+            </button>
+            <h1>Análise de desempenho</h1>
+        </div>
     </header>
 
     <main class="container">
@@ -44,11 +49,18 @@
                 
         <div id="team-grid" class="team-grid">
         </div>
-    </main>
-
-    <div id="modal-container">
+        
+        <!-- Ranking Section (inicialmente escondida) -->
+        <div id="ranking-section" class="ranking-section" style="display: none;">
+            <div class="ranking-header">
+                <h2>🏆 Ranking de Colaboradores</h2>
+                <button class="fechar-ranking-btn" onclick="toggleRanking()">✕ Fechar</button>
+            </div>
+            <div id="ranking-grid" class="ranking-grid">
+                <!-- Cards de ranking serão carregados aqui -->
+            </div>
         </div>
-
+        
         <div class="upload-container">
             <h3>📊 Carregar dados</h3>
             <div class="upload-row">
@@ -76,6 +88,11 @@
             </div>
             <p id="upload-status" class="upload-status">Aguardando anexos...</p>
         </div>
+    </main>
+
+    <div id="modal-container">
+        <!-- Modais dos colaboradores serão carregados aqui -->
+    </div>
 
     <!-- Sidebar para clientes -->
     <div id="clientes-sidebar" class="clientes-sidebar">
