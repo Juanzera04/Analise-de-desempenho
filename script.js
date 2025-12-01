@@ -1886,11 +1886,13 @@ function renderModals(data) {
             </div>
         `;
 
-        const finalProgressPercentage = member.PROGRESSO_VALOR;
-        const finalProgressAngle = (finalProgressPercentage / 100) * 360;
+        // --- PROGRESSO VINDO DIRETO DA BASE ---
+        const progressoStr = member.PROGRESSO_VALOR || "0%";
+        const progressoNum = parseInt(progressoStr.replace("%", "")) || 0;
+        const finalProgressPercentage = progressoNum;
+        const finalProgressAngle = (progressoNum / 100) * 360;
+
         const complexidadeCounts = member.COMPLEXIDADE_COUNT;
-        const totalClients = member.CLIENTES_TOTAIS;
-        const totalTasks = member.TAREFAS_TOTAIS;
         const pontuacaoTotal = taskData
             .filter(t => (t.Responsável || t.Responsavel || t['responsavel']) === member.NOME)
             .reduce((sum, t) => sum + (parseInt(t.Pontuação) || 0), 0);
