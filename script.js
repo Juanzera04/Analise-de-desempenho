@@ -674,13 +674,8 @@ function calcularDadosFiltrados(member, competenciaFiltro) {
         if (memberFiltrado.COMPLEXIDADE_COUNT[cx] !== undefined) memberFiltrado.COMPLEXIDADE_COUNT[cx]++;
     });
 
-    memberFiltrado.TAREFAS_CONCLUIDAS = tarefasFiltradas.filter(t =>
-        t.Status && String(t.Status).toLowerCase().includes('concluído')
-    ).length;
-    memberFiltrado.TAREFAS_PENDENTES = tarefasFiltradas.filter(t =>
-        t.Status && String(t.Status).toLowerCase().includes('pendente')
-    ).length;
-    memberFiltrado.TAREFAS_TOTAIS = memberFiltrado.TAREFAS_CONCLUIDAS + memberFiltrado.TAREFAS_PENDENTES;
+    const statusItem = tarefasFiltradas[0]; // cada colaborador tem 1 linha agrupada
+    memberFiltrado.PROGRESSO_VALOR = statusItem?.Status || "0%";
 
     const percentage = memberFiltrado.TAREFAS_TOTAIS > 0
         ? Math.round((memberFiltrado.TAREFAS_CONCLUIDAS / memberFiltrado.TAREFAS_TOTAIS) * 100)
@@ -1299,7 +1294,7 @@ function renderAutocompleteList(data) {
  * E APLICA OS FILTROS DE COMPETÊNCIA NOS DADOS TAMBÉM
  */
 function recalculateAggregations(filteredCollaborators) {
-    const filterCompetencia = document.getElementById('filter-competencia').value = "Outubro";
+    const filterCompetencia = document.getElementById('filter-competencia').value;
 
     const collaboratorMap = new Map();
     filteredCollaborators.forEach(collab => {
