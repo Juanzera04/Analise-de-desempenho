@@ -639,8 +639,19 @@ function renderizarModalTime(timeNum, member) {
 }
 
 /**
- * Calcula os dados filtrados de um colaborador baseado na competência selecionada
+ * Obtém o filtro de competência ativo
  */
+function getFiltroCompetenciaAtivo() {
+    return document.getElementById('filter-competencia').value;
+}
+
+/**
+ * Obtém o filtro de competência para um time específico (na comparação)
+ */
+function getFiltroCompetenciaTime(timeNum) {
+    return document.getElementById(`filtro-competencia-${timeNum}`).value;
+}
+
 function calcularDadosFiltrados(member, competenciaFiltro) {
     if (!competenciaFiltro) return member;
 
@@ -674,40 +685,59 @@ function calcularDadosFiltrados(member, competenciaFiltro) {
         if (memberFiltrado.COMPLEXIDADE_COUNT[cx] !== undefined) memberFiltrado.COMPLEXIDADE_COUNT[cx]++;
     });
 
-    // NOVO: Calcula o percentual de progresso diretamente da coluna Status
-    let progressoTotal = 0;
-    let tarefasComPercentual = 0;
-    
-    tarefasFiltradas.forEach(tarefa => {
-        const statusValue = tarefa.Status || '0%';
-        // Extrai o número do percentual (ex: "40%" → 40)
+    // SE HOUVER FILTRO DE COMPETÊNCIA, USA O VALOR DIRETO DA TAREFA FILTRADA
+    if (competenciaFiltro && tarefasFiltradas.length > 0) {
+        // Para progresso: pega o valor direto da tarefa filtrada
+        const tarefaFiltrada = tarefasFiltradas[0];
+        const statusValue = tarefaFiltrada.Status || '0%';
         const percentMatch = statusValue.toString().match(/(\d+(\.\d+)?)%/);
         if (percentMatch) {
-            progressoTotal += parseFloat(percentMatch[1]);
-            tarefasComPercentual++;
+            memberFiltrado.PROGRESSO_VALOR = parseFloat(percentMatch[1]);
         } else if (!isNaN(parseFloat(statusValue))) {
-            // Se for apenas um número sem o símbolo %
-            progressoTotal += parseFloat(statusValue);
-            tarefasComPercentual++;
+            memberFiltrado.PROGRESSO_VALOR = parseFloat(statusValue);
+        } else {
+            memberFiltrado.PROGRESSO_VALOR = 0;
         }
-    });
-
-    // Calcula a média dos percentuais
-    const progressoMedio = tarefasComPercentual > 0 
-        ? Math.round(progressoTotal / tarefasComPercentual)
-        : 0;
+        
+        // Para pontuação: pega o valor direto da tarefa filtrada
+        memberFiltrado.PONTUACAO_FILTRADA = parseFloat(tarefaFiltrada.Pontuação) || 0;
+    } else {
+        // Sem filtro: calcula médias/somas
+        let progressoTotal = 0;
+        let tarefasComPercentual = 0;
+        
+        taskData.filter(t => (t.Responsável || t.Responsavel || t['responsavel']) === member.NOME)
+            .forEach(tarefa => {
+                const statusValue = tarefa.Status || '0%';
+                const percentMatch = statusValue.toString().match(/(\d+(\.\d+)?)%/);
+                if (percentMatch) {
+                    progressoTotal += parseFloat(percentMatch[1]);
+                    tarefasComPercentual++;
+                } else if (!isNaN(parseFloat(statusValue))) {
+                    progressoTotal += parseFloat(statusValue);
+                    tarefasComPercentual++;
+                }
+            });
+        
+        memberFiltrado.PROGRESSO_VALOR = tarefasComPercentual > 0 
+            ? Math.round(progressoTotal / tarefasComPercentual)
+            : 0;
+        
+        memberFiltrado.PONTUACAO_FILTRADA = taskData
+            .filter(t => (t.Responsável || t.Responsavel || t['responsavel']) === member.NOME)
+            .reduce((sum, t) => sum + (parseFloat(t.Pontuação) || 0), 0);
+    }
     
-    memberFiltrado.PROGRESSO_VALOR = progressoMedio;
     memberFiltrado.TAREFAS_TOTAIS = tarefasFiltradas.length;
 
     const gruposDistintos = new Set(clientesFiltrados.map(c => c.Grupo || c.grupo)).size;
     memberFiltrado.STAT_2_VALOR = gruposDistintos;
 
-    memberFiltrado.DESCRICAO = `Clientes: ${memberFiltrado.CLIENTES_TOTAIS} | Status: ${progressoMedio}% | Faturamento: ${new Intl.NumberFormat('pt-BR', {
-        style: 'currency',
-        currency: 'BRL',
-        minimumFractionDigits: 0
-    }).format(memberFiltrado.FATURAMENTO_TOTAL)}`;
+    const pontuacaoExibir = competenciaFiltro ? 
+        memberFiltrado.PONTUACAO_FILTRADA.toLocaleString('pt-BR', { minimumFractionDigits: 1, maximumFractionDigits: 1 }) :
+        memberFiltrado.PONTUACAO_FILTRADA.toLocaleString('pt-BR');
+
+    memberFiltrado.DESCRICAO = `Clientes: ${memberFiltrado.CLIENTES_TOTAIS} | Status: ${Math.round(memberFiltrado.PROGRESSO_VALOR)}% | Pontuação: ${pontuacaoExibir}`;
 
     return memberFiltrado;
 }
@@ -1238,6 +1268,9 @@ async function loadAllCSVs(fileCliente, fileColaborador, fileTarefa) {
             renderAutocompleteList(teamData);
             populateSelectionFilters(teamData);
             renderTeamCards(teamData);
+            
+            // 🔹 AQUI: Adicione esta linha - Define "Outubro" como filtro padrão após renderizar
+            definirOutubroComoPadrao();
         } else {
             console.error('Dados insuficientes para renderização. Verifique os CSVs enviados e o cabeçalho "Responsável".');
         }
@@ -1246,7 +1279,6 @@ async function loadAllCSVs(fileCliente, fileColaborador, fileTarefa) {
         console.error('Falha ao processar um ou mais arquivos CSV locais:', error);
     }
 }
-
 // ----------------------------------------------------------------------
 // FEEDBACK DE UPLOAD COM BARRA DE PROGRESSO
 // ----------------------------------------------------------------------
@@ -1316,7 +1348,7 @@ function renderAutocompleteList(data) {
  * E APLICA OS FILTROS DE COMPETÊNCIA NOS DADOS TAMBÉM
  */
 function recalculateAggregations(filteredCollaborators) {
-    const filterCompetencia = document.getElementById('filter-competencia').value;
+    const filterCompetencia = getFiltroCompetenciaAtivo();
 
     const collaboratorMap = new Map();
     filteredCollaborators.forEach(collab => {
@@ -1326,8 +1358,9 @@ function recalculateAggregations(filteredCollaborators) {
             FATURAMENTO_TOTAL: 0,
             CLIENTES_TOTAIS: 0,
             COMPETENCIAS: new Set(),
-            // REMOVER OS CÁLCULOS DE TAREFAS
-            STATUS_PERCENTUAL: 0 // NOVO CAMPO PARA ARMAZENAR O PERCENTUAL DIRETO
+            // NOVOS CAMPOS PARA VALORES FILTRADOS
+            STATUS_PERCENTUAL_FILTRADO: 0,
+            PONTUACAO_FILTRADA: 0
         });
     });
 
@@ -1351,7 +1384,7 @@ function recalculateAggregations(filteredCollaborators) {
         }
     });
 
-    // CALCULAR PERCENTUAL DE STATUS DAS TAREFAS (AGORA É O VALOR DIRETO)
+    // Calcula valores FILTRADOS das tarefas
     taskData.forEach(task => {
         const resp = task.Responsável || task.Responsavel || task['responsavel'];
         const competencia = task.Competência || task.Competencia || task['competencia'];
@@ -1361,18 +1394,19 @@ function recalculateAggregations(filteredCollaborators) {
         const member = collaboratorMap.get(resp);
         if (competencia) member.COMPETENCIAS.add(String(competencia).trim());
         
-        // AGORA PEGA O VALOR DIRETO DA CÉLULA DE STATUS (que já é o percentual)
+        // PEGA O VALOR DO STATUS (que já é o percentual)
         const statusValue = task.Status || '0%';
-        // Extrai o número do percentual (ex: "40%" → 40)
+        // Extrai o número do percentual
         const percentMatch = statusValue.toString().match(/(\d+(\.\d+)?)%/);
         if (percentMatch) {
-            member.STATUS_PERCENTUAL = parseFloat(percentMatch[1]);
+            member.STATUS_PERCENTUAL_FILTRADO = parseFloat(percentMatch[1]);
         } else if (!isNaN(parseFloat(statusValue))) {
-            // Se for apenas um número sem o símbolo %
-            member.STATUS_PERCENTUAL = parseFloat(statusValue);
+            member.STATUS_PERCENTUAL_FILTRADO = parseFloat(statusValue);
         }
-        // Se houver múltiplas tarefas, você pode querer calcular a média
-        // Mas pelo que entendi, você já traz o valor consolidado
+        
+        // PEGA A PONTUAÇÃO
+        const pontuacao = parseFloat(task.Pontuação) || 0;
+        member.PONTUACAO_FILTRADA = pontuacao;
     });
 
     // Monta resultado final
@@ -1399,15 +1433,17 @@ function recalculateAggregations(filteredCollaborators) {
 
         const salarioFormatado = new Intl.NumberFormat('pt-BR', { style: 'decimal', minimumFractionDigits: 2 }).format(member.SALARIO_BASE);
 
+        // SE HOUVER FILTRO, USA OS VALORES FILTRADOS, SENÃO USA OS ACUMULADOS
+        const progressoValor = filterCompetencia ? member.STATUS_PERCENTUAL_FILTRADO : member.PROGRESSO_VALOR || 0;
+        const pontuacaoTotal = filterCompetencia ? member.PONTUACAO_FILTRADA : 
+            (taskData.filter(t => (t.Responsável || t.Responsavel || t['responsavel']) === member.NOME)
+                .reduce((sum, t) => sum + (parseFloat(t.Pontuação) || 0), 0));
+
         return {
             ...member,
             COMPETENCIAS: competenciasArray,
             CLIENTES_TOTAIS: clientesTotaisFiltrados,
-            DESCRICAO: `Clientes: ${clientesTotaisFiltrados} | Status: ${member.STATUS_PERCENTUAL || 0}% | Faturamento: ${new Intl.NumberFormat('pt-BR', {
-                style: 'currency',
-                currency: 'BRL',
-                minimumFractionDigits: 0
-            }).format(member.FATURAMENTO_TOTAL)}`,
+            DESCRICAO: `Clientes: ${clientesTotaisFiltrados} | Status: ${progressoValor}% | Pontuação: ${pontuacaoTotal.toLocaleString('pt-BR')}`,
             GRUPOS_DISTINTOS: gruposDistintos,
             SALARIO: salarioFormatado,
             STAT_1_TITULO: 'Clientes',
@@ -1417,7 +1453,8 @@ function recalculateAggregations(filteredCollaborators) {
             STAT_3_TITULO: 'Faturamento',
             STAT_3_VALOR: member.FATURAMENTO_TOTAL,
             PROGRESSO_TITULO: 'Qualidade das entregas',
-            PROGRESSO_VALOR: member.STATUS_PERCENTUAL || 0 // USA O VALOR DIRETO
+            PROGRESSO_VALOR: progressoValor,
+            PONTUACAO_TOTAL: pontuacaoTotal
         };
     });
 }
@@ -1860,36 +1897,77 @@ function renderModals(data) {
             profileContent = member.INICIAL;
         }
 
-        // NOVO: Calcula o percentual de progresso baseado na coluna Status das tarefas
-        let progressoTotal = 0;
-        let tarefasComPercentual = 0;
+        // ====================================================
+        // CÁLCULO DO PROGRESSO COM FILTRO DE COMPETÊNCIA
+        // ====================================================
+        const filterCompetencia = getFiltroCompetenciaAtivo();
+        let progressoValor = 0;
+        let pontuacaoTotal = 0;
         
-        const tarefasColab = taskData.filter(t => 
-            (t.Responsável || t.Responsavel || t['responsavel']) === member.NOME
-        );
-        
-        tarefasColab.forEach(tarefa => {
-            const statusValue = tarefa.Status || '0%';
-            const percentMatch = statusValue.toString().match(/(\d+(\.\d+)?)%/);
-            if (percentMatch) {
-                progressoTotal += parseFloat(percentMatch[1]);
-                tarefasComPercentual++;
-            } else if (!isNaN(parseFloat(statusValue))) {
-                progressoTotal += parseFloat(statusValue);
-                tarefasComPercentual++;
+        if (filterCompetencia) {
+            // COM FILTRO: busca a tarefa específica dessa competência
+            const tarefaFiltrada = taskData.find(t => 
+                (t.Responsável || t.Responsavel || t['responsavel']) === member.NOME &&
+                (t.Competência || t.Competencia || t['competencia']) === filterCompetencia
+            );
+            
+            if (tarefaFiltrada) {
+                // Progresso: valor direto da tarefa filtrada
+                const statusValue = tarefaFiltrada.Status || '0%';
+                const percentMatch = statusValue.toString().match(/(\d+(\.\d+)?)%/);
+                if (percentMatch) {
+                    progressoValor = parseFloat(percentMatch[1]);
+                } else if (!isNaN(parseFloat(statusValue))) {
+                    progressoValor = parseFloat(statusValue);
+                }
+                
+                // Pontuação: valor direto da tarefa filtrada
+                pontuacaoTotal = parseFloat(tarefaFiltrada.Pontuação) || 0;
             }
-        });
-        
-        const progressoMedio = tarefasComPercentual > 0 
-            ? Math.round(progressoTotal / tarefasComPercentual)
-            : member.PROGRESSO_VALOR || 0;
+        } else {
+            // SEM FILTRO: calcula médias/somas
+            const tarefasColab = taskData.filter(t => 
+                (t.Responsável || t.Responsavel || t['responsavel']) === member.NOME
+            );
+            
+            // Progresso: média de todas as tarefas
+            let progressoTotal = 0;
+            let tarefasComPercentual = 0;
+            
+            tarefasColab.forEach(tarefa => {
+                const statusValue = tarefa.Status || '0%';
+                const percentMatch = statusValue.toString().match(/(\d+(\.\d+)?)%/);
+                if (percentMatch) {
+                    progressoTotal += parseFloat(percentMatch[1]);
+                    tarefasComPercentual++;
+                } else if (!isNaN(parseFloat(statusValue))) {
+                    progressoTotal += parseFloat(statusValue);
+                    tarefasComPercentual++;
+                }
+            });
+            
+            progressoValor = tarefasComPercentual > 0 
+                ? Math.round(progressoTotal / tarefasComPercentual)
+                : member.PROGRESSO_VALOR || 0;
+            
+            // Pontuação: soma de todas as tarefas
+            pontuacaoTotal = tarefasColab.reduce((sum, t) => 
+                sum + (parseFloat(t.Pontuação) || 0), 0);
+        }
 
+        // ====================================================
+        // STAT 3 (FATURAMENTO OU VIDAS)
+        // ====================================================
         let stat3HTML = '';
 
         if (member.DEPARTAMENTO === "DP - DEPTO. PESSOAL") {
-            const clientesDoColab = clientData.filter(c =>
-                (c.Responsável || c.Responsavel || c['responsavel']) === member.NOME
-            );
+            // Filtra clientes com base no filtro de competência
+            const clientesDoColab = clientData.filter(c => {
+                const respMatch = (c.Responsável || c.Responsavel || c['responsavel']) === member.NOME;
+                const competenciaMatch = !filterCompetencia || 
+                    (c.Competência || c.Competencia || c['competencia']) === filterCompetencia;
+                return respMatch && competenciaMatch;
+            });
 
             const vidasTotal = clientesDoColab.reduce((s, c) => s + (parseInt(c.Vidas) || 0), 0);
             const admissoesTotal = clientesDoColab.reduce((s, c) => s + (parseInt(c.Admissões) || 0), 0);
@@ -1910,13 +1988,26 @@ function renderModals(data) {
                 </div>
             `;
         } else {
+            // Filtra clientes com base no filtro de competência
+            const clientesDoColab = clientData.filter(c => {
+                const respMatch = (c.Responsável || c.Responsavel || c['responsavel']) === member.NOME;
+                const competenciaMatch = !filterCompetencia || 
+                    (c.Competência || c.Competencia || c['competencia']) === filterCompetencia;
+                return respMatch && competenciaMatch;
+            });
+            
+            const faturamentoTotal = clientesDoColab.reduce((sum, c) => {
+                const fatur = c.Faturamento || c.faturamento || c["Faturamento Total"] || 0;
+                return sum + parseCurrency(fatur);
+            }, 0);
+            
             const faturamentoFormatado = new Intl.NumberFormat('pt-BR', {
                 style: 'currency',
                 currency: 'BRL',
                 minimumFractionDigits: 2
-            }).format(member.STAT_3_VALOR || 0);
+            }).format(faturamentoTotal || 0);
 
-            const trend = member.STAT_3_VALOR > 0 ? '<span class="positive">↑</span>' : '';
+            const trend = faturamentoTotal > 0 ? '<span class="positive">↑</span>' : '';
 
             stat3HTML = `
                 <div class="stat-item">
@@ -1926,6 +2017,9 @@ function renderModals(data) {
             `;
         }
 
+        // ====================================================
+        // STATS ROW
+        // ====================================================
         const statsRowHTML = `
             <div class="stats-row">
                 <div class="stat-item">
@@ -1940,22 +2034,28 @@ function renderModals(data) {
             </div>
         `;
 
-        // Usa o progresso médio calculado
-        const finalProgressPercentage = progressoMedio;
+        // ====================================================
+        // GRÁFICOS E RANK
+        // ====================================================
+        const finalProgressPercentage = Math.round(progressoValor);
         const finalProgressAngle = (finalProgressPercentage / 100) * 360;
         const complexidadeCounts = member.COMPLEXIDADE_COUNT;
         
-        // NOVO: Calcula pontuação total das tarefas
-        const pontuacaoTotal = tarefasColab.reduce((sum, t) => sum + (parseInt(t.Pontuação) || 0), 0);
+        // RANK MÉDIO DO COLABORADOR (considerando filtro)
+        const tarefasParaRank = taskData.filter(t => {
+            const respMatch = (t.Responsável || t.Responsavel || t['responsavel']) === member.NOME;
+            const competenciaMatch = !filterCompetencia || 
+                (t.Competência || t.Competencia || t['competencia']) === filterCompetencia;
+            return respMatch && competenciaMatch;
+        });
         
-        // RANK MÉDIO DO COLABORADOR
-        const ranks = tarefasColab.map(t => parseInt(t.Rank) || 0);
+        const ranks = tarefasParaRank.map(t => parseInt(t.Rank) || 0);
         const rankMedio = ranks.length > 0
             ? Math.round(ranks.reduce((sum, r) => sum + r, 0) / ranks.length)
             : 0;
 
         // RANK TOTAL MÉDIO
-        const ranksTotais = tarefasColab.map(t => parseInt(t["Rank Total"]) || 0);
+        const ranksTotais = tarefasParaRank.map(t => parseInt(t["Rank Total"]) || 0);
         const rankTotalMedio = ranksTotais.length > 0
             ? Math.round(ranksTotais.reduce((sum, r) => sum + r, 0) / ranksTotais.length)
             : 0;
@@ -1978,6 +2078,12 @@ function renderModals(data) {
         const barHeightA = maxCount > 0 ? (complexidadeCounts['A'] / maxCount) * 100 : (complexidadeCounts['A'] > 0 ? 20 : 0);
         const barHeightB = maxCount > 0 ? (complexidadeCounts['B'] / maxCount) * 100 : (complexidadeCounts['B'] > 0 ? 20 : 0);
         const barHeightC = maxCount > 0 ? (complexidadeCounts['C'] / maxCount) * 100 : (complexidadeCounts['C'] > 0 ? 20 : 0);
+
+        // Formata pontuação
+        const pontuacaoFormatada = pontuacaoTotal.toLocaleString('pt-BR', {
+            minimumFractionDigits: 1,
+            maximumFractionDigits: 1
+        });
 
         const complexityBarsHTML = `
             <div class="complexity-section">
@@ -2014,7 +2120,7 @@ function renderModals(data) {
                             <span class="quality-percentage">${finalProgressPercentage}%</span>
                         </div>
                     </div>
-                    <p class="rank-info">${pontuacaoTotal} pontos</p>
+                    <p class="rank-info">${pontuacaoFormatada} pontos</p>
                     <p class="rank-info ${rankClass}">
                         ${rankEmoji} Rank ${rankMedio}/${rankTotalMedio}
                     </p>
@@ -2022,7 +2128,9 @@ function renderModals(data) {
             </div>
         `;
 
-        const filterCompetencia = document.getElementById('filter-competencia').value;
+        // ====================================================
+        // BOTÕES DO MODAL
+        // ====================================================
         const btnClass = filterCompetencia ? 'ver-clientes-btn filtro-ativo' : 'ver-clientes-btn';
         const compararBtnClass = filterCompetencia ? 'comparar-btn filtro-ativo' : 'comparar-btn';
 
@@ -2030,7 +2138,7 @@ function renderModals(data) {
             <div class="modal-buttons-container">
                 <button class="${btnClass}" onclick="abrirClientesSidebar('${member.ID}')">
                     Clientes
-                    ${filterCompetencia ? '' : ''}
+                    ${filterCompetencia ? `(${filterCompetencia})` : ''}
                 </button>
                 <button class="${compararBtnClass}" onclick="abrirCompararSidebar('${member.ID}')">
                     Comparar
@@ -2038,6 +2146,9 @@ function renderModals(data) {
             </div>
         `;
 
+        // ====================================================
+        // HTML FINAL DO MODAL
+        // ====================================================
         const modalHtml = `
             <div id="${member.ID}-modal" class="modal">
                 <div class="modal-content" id="${member.ID}-modal-content">
@@ -2552,7 +2663,7 @@ function toggleRanking() {
 }
 
 /**
- * Renderiza o ranking dos colaboradores
+ * Renderiza o ranking dos colaboradores em cards individuais
  */
 function renderizarRanking() {
     const rankingGrid = document.getElementById('ranking-grid');
@@ -2562,7 +2673,7 @@ function renderizarRanking() {
     const searchTerm = document.getElementById('search-input').value.toLowerCase().trim();
     const filterUnidade = document.getElementById('filter-unidade').value;
     const filterDepartamento = document.getElementById('filter-departamento').value;
-    const filterCompetencia = document.getElementById('filter-competencia').value;
+    const filterCompetencia = getFiltroCompetenciaAtivo();
     
     // Aplica os mesmos filtros da tela principal
     let colaboradoresFiltrados = teamData.filter(member => {
@@ -2596,23 +2707,91 @@ function renderizarRanking() {
         });
     }
     
-    // Calcula o rank médio para cada colaborador
     colaboradoresFiltrados.forEach(member => {
-        const tarefasColab = taskData.filter(t => 
-            (t.Responsável || t.Responsavel || t['responsavel']) === member.NOME
-        );
+        // Filtra tarefas baseado no filtro de competência
+        const tarefasColabFiltradas = taskData.filter(t => {
+            const respMatch = (t.Responsável || t.Responsavel || t['responsavel']) === member.NOME;
+            const competenciaMatch = !filterCompetencia || 
+                (t.Competência || t.Competencia || t['competencia']) === filterCompetencia;
+            return respMatch && competenciaMatch;
+        });
         
-        const ranks = tarefasColab.map(t => parseInt(t.Rank) || 0);
+        // Se há filtro de competência, usa apenas as tarefas filtradas
+        // Senão, usa todas as tarefas do colaborador
+        const tarefasParaCalculo = filterCompetencia ? tarefasColabFiltradas : 
+            taskData.filter(t => (t.Responsável || t.Responsavel || t['responsavel']) === member.NOME);
+        
+        // Calcula rank médio das tarefas relevantes
+        const ranks = tarefasParaCalculo.map(t => parseInt(t.Rank) || 0);
         member.RANK_MEDIO = ranks.length > 0 
             ? Math.round(ranks.reduce((sum, r) => sum + r, 0) / ranks.length)
             : 0;
+        
+        // Calcula PONTUAÇÃO: se há filtro, usa o valor da tarefa filtrada, senão soma todas
+        if (filterCompetencia && tarefasColabFiltradas.length > 0) {
+            // Se há filtro e há tarefas, pega o valor da primeira (deveria ser apenas uma)
+            member.PONTUACAO_TOTAL = parseFloat(tarefasColabFiltradas[0].Pontuação) || 0;
+        } else {
+            // Sem filtro: soma todas as pontuações
+            member.PONTUACAO_TOTAL = taskData
+                .filter(t => (t.Responsável || t.Responsavel || t['responsavel']) === member.NOME)
+                .reduce((sum, t) => sum + (parseFloat(t.Pontuação) || 0), 0);
+        }
+        
+        // Calcula PROGRESSO: se há filtro, usa o valor da tarefa filtrada, senão calcula média
+        if (filterCompetencia && tarefasColabFiltradas.length > 0) {
+            const statusValue = tarefasColabFiltradas[0].Status || '0%';
+            const percentMatch = statusValue.toString().match(/(\d+(\.\d+)?)%/);
+            if (percentMatch) {
+                member.PROGRESSO_RANK = parseFloat(percentMatch[1]);
+            } else if (!isNaN(parseFloat(statusValue))) {
+                member.PROGRESSO_RANK = parseFloat(statusValue);
+            } else {
+                member.PROGRESSO_RANK = 0;
+            }
+        } else {
+            // Sem filtro: calcula média de todas as tarefas
+            let progressoTotal = 0;
+            let tarefasComPercentual = 0;
+            
+            taskData.filter(t => (t.Responsável || t.Responsavel || t['responsavel']) === member.NOME)
+                .forEach(tarefa => {
+                    const statusValue = tarefa.Status || '0%';
+                    const percentMatch = statusValue.toString().match(/(\d+(\.\d+)?)%/);
+                    if (percentMatch) {
+                        progressoTotal += parseFloat(percentMatch[1]);
+                        tarefasComPercentual++;
+                    } else if (!isNaN(parseFloat(statusValue))) {
+                        progressoTotal += parseFloat(statusValue);
+                        tarefasComPercentual++;
+                    }
+                });
+            
+            member.PROGRESSO_RANK = tarefasComPercentual > 0 
+                ? Math.round(progressoTotal / tarefasComPercentual)
+                : 0;
+        }
+        
+        // Calcula também as estatísticas para o ranking
+        const clientesColabFiltrados = clientData.filter(c => {
+            const respMatch = (c.Responsável || c.Responsavel || c['responsavel']) === member.NOME;
+            const competenciaMatch = !filterCompetencia || 
+                (c.Competência || c.Competencia || c['competencia']) === filterCompetencia;
+            return respMatch && competenciaMatch;
+        });
+        
+        member.CLIENTES_TOTAIS_RANK = clientesColabFiltrados.length;
+        member.FATURAMENTO_TOTAL_RANK = clientesColabFiltrados.reduce((sum, c) => {
+            const fatur = c.Faturamento || c.faturamento || c["Faturamento Total"] || 0;
+            return sum + parseCurrency(fatur);
+        }, 0);
     });
     
     // Ordena pelo rank médio (menor valor = melhor posição)
     colaboradoresFiltrados.sort((a, b) => {
         // Se ambos têm rank 0, ordena por faturamento
         if (a.RANK_MEDIO === 0 && b.RANK_MEDIO === 0) {
-            return b.FATURAMENTO_TOTAL - a.FATURAMENTO_TOTAL;
+            return b.FATURAMENTO_TOTAL_RANK - a.FATURAMENTO_TOTAL_RANK;
         }
         // Se um tem rank 0 e outro não, o com rank definido vem primeiro
         if (a.RANK_MEDIO === 0) return 1;
@@ -2624,8 +2803,10 @@ function renderizarRanking() {
     // Renderiza os cards de ranking
     if (colaboradoresFiltrados.length === 0) {
         rankingGrid.innerHTML = `
-            <div class="ranking-card" style="grid-column: 1 / -1; text-align: center; padding: 30px;">
-                <p style="color: var(--dark-secondary-text);">Nenhum colaborador encontrado com os filtros atuais.</p>
+            <div class="ranking-card" style="text-align: center; padding: 40px;">
+                <p style="color: var(--dark-secondary-text); font-size: 1.1rem;">
+                    Nenhum colaborador encontrado com os filtros atuais.
+                </p>
             </div>
         `;
         return;
@@ -2636,19 +2817,19 @@ function renderizarRanking() {
     colaboradoresFiltrados.forEach((member, index) => {
         const posicao = index + 1;
         
-        // Determina a classe da posição
-        let posicaoClass = 'outros';
-        let posicaoEmoji = '';
+        // Determina a classe da medalha
+        let medalhaClass = 'outros';
+        let medalhaEmoji = '';
         
         if (posicao === 1) {
-            posicaoClass = 'ouro';
-            posicaoEmoji = '🥇';
+            medalhaClass = 'ouro';
+            medalhaEmoji = '🥇';
         } else if (posicao === 2) {
-            posicaoClass = 'prata';
-            posicaoEmoji = '🥈';
+            medalhaClass = 'prata';
+            medalhaEmoji = '🥈';
         } else if (posicao === 3) {
-            posicaoClass = 'bronze';
-            posicaoEmoji = '🥉';
+            medalhaClass = 'bronze';
+            medalhaEmoji = '🥉';
         }
         
         // Usa a mesma cor do cargo
@@ -2657,20 +2838,75 @@ function renderizarRanking() {
         // Foto ou inicial
         const fotoContent = (member.FOTO_URL && member.FOTO_URL !== 'N/A')
             ? `<img src="${member.FOTO_URL}" alt="${member.NOME}">`
-            : member.INICIAL;
+            : `<span style="font-size: 3rem;">${member.INICIAL}</span>`;
+        
+        // Formata valores
+        const faturamentoFormatado = new Intl.NumberFormat('pt-BR', { 
+            style: 'currency', 
+            currency: 'BRL', 
+            minimumFractionDigits: 2 
+        }).format(member.FATURAMENTO_TOTAL_RANK || 0);
+        
+        // Formata pontuação (com uma casa decimal se necessário)
+        const pontuacaoFormatada = (member.PONTUACAO_TOTAL || 0).toLocaleString('pt-BR', {
+            minimumFractionDigits: 1,
+            maximumFractionDigits: 1
+        });
+        
+        // Calcula ângulo do progresso
+        const progressoAngle = ((member.PROGRESSO_RANK || 0) / 100) * 360;
         
         rankingHTML += `
             <div class="ranking-card" onclick="openModal('${member.ID}')">
-                <div class="ranking-posicao ${posicaoClass}" style="border: 2px solid ${color};">
-                    ${posicao}${posicaoEmoji}
+                <!-- Coluna 1: Posição -->
+                <div class="ranking-posicao-coluna">
+                    <div class="ranking-numero">${posicao}º</div>
+                    <div class="ranking-medalha ${medalhaClass}">
+                        ${medalhaEmoji}
+                    </div>
                 </div>
-                <div class="ranking-info">
-                    <h3 class="ranking-nome">${member.NOME}</h3>
-                    <p class="ranking-departamento">${member.DEPARTAMENTO}</p>
-                    <p class="ranking-cargo">${member.CARGO_CARTEIRA || 'N/A'}</p>
-                </div>
-                <div class="ranking-foto" style="background: ${color};">
+                
+                <!-- Coluna 2: Foto -->
+                <div class="ranking-foto-container" style="background: ${color};">
                     ${fotoContent}
+                </div>
+                
+                <!-- Coluna 3: Informações e Estatísticas -->
+                <div class="ranking-info-container">
+                    <div class="ranking-info">
+                        <h3 class="ranking-nome">${member.NOME}</h3>
+                        <p class="ranking-departamento">${member.DEPARTAMENTO}</p>
+                        <p class="ranking-cargo" style="border-left-color: ${color};">${member.CARGO_CARTEIRA || 'N/A'}</p>
+                    </div>
+                    
+                    <!-- Estatísticas -->
+                    <div class="ranking-stats">
+                        <div class="stat-item-ranking">
+                            <div class="stat-title-ranking">Clientes</div>
+                            <div class="stat-value-ranking">${member.CLIENTES_TOTAIS_RANK || 0}</div>
+                        </div>
+                        
+                        <div class="stat-item-ranking">
+                            <div class="stat-title-ranking">Faturamento</div>
+                            <div class="stat-value-ranking currency">${faturamentoFormatado}</div>
+                        </div>
+
+                        <div class="stat-item-ranking">
+                            <div class="stat-title-ranking">Pontuação</div>
+                            <div class="stat-value-ranking ">${pontuacaoFormatada}</div>
+                        </div>
+                        
+                        <div class="stat-item-ranking">
+                            <div class="stat-title-ranking">Progresso</div>
+                            <!-- Círculo de progresso com pontuação -->
+                            <div class="ranking-progress">
+                                <div class="ranking-progress-circle" 
+                                     style="background: conic-gradient(${color} ${progressoAngle}deg, #444 0deg);">
+                                    <span class="ranking-progress-value">${Math.round(member.PROGRESSO_RANK || 0)}%</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
                 </div>
             </div>
         `;
@@ -2689,6 +2925,46 @@ function atualizarRankingComFiltros() {
     }
 }
 
+/**
+ * Define "Outubro" como filtro padrão após carregar os dados
+ */
+function definirOutubroComoPadrao() {
+    const competenciaSelect = document.getElementById('filter-competencia');
+    if (!competenciaSelect) return;
+    
+    // Aguarda um momento para garantir que as opções foram carregadas
+    setTimeout(() => {
+        // Procura a opção "Outubro" (case insensitive)
+        let foundOutubro = false;
+        
+        for (let i = 0; i < competenciaSelect.options.length; i++) {
+            const option = competenciaSelect.options[i];
+            if (option.value.toLowerCase() === "Outubro" || 
+                option.text.toLowerCase() === "outubro") {
+                competenciaSelect.value = option.value;
+                foundOutubro = true;
+                break;
+            }
+        }
+        
+        // Se encontrou "Outubro", aplica o filtro
+        if (foundOutubro) {
+            console.log('Filtro padrão "Outubro" aplicado');
+            
+            // Dispara o evento para aplicar o filtro
+            const event = new Event('change', { bubbles: true });
+            competenciaSelect.dispatchEvent(event);
+            
+            // Se o ranking estiver visível, atualiza também
+            const rankingSection = document.getElementById('ranking-section');
+            if (rankingSection && rankingSection.style.display !== 'none') {
+                renderizarRanking();
+            }
+        } else {
+            console.log('Opção "Outubro" não encontrada nos filtros');
+        }
+    }, 300); // Pequeno delay para garantir que os filtros foram populados
+}
 
 // ----------------------------------------------------------------------
 // INICIALIZAÇÃO

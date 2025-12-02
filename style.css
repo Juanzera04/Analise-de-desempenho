@@ -2274,3 +2274,348 @@ h1 {
         padding: 12px;
     }
 }
+
+/* ============================================= */
+/* RANKING EM CARDS INDIVIDUAIS - LAYOUT REVISADO */
+/* ============================================= */
+
+.ranking-section {
+    margin-top: 30px;
+    background-color: var(--dark-background);
+    border-radius: 10px;
+    padding: 20px;
+}
+
+.ranking-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 25px;
+    padding-bottom: 15px;
+    border-bottom: 2px solid var(--modal-border);
+}
+
+.ranking-header h2 {
+    color: var(--dark-text);
+    font-size: 1.6rem;
+    margin: 0;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.fechar-ranking-btn {
+    background-color: #ef5350;
+    color: white;
+    border: none;
+    border-radius: 5px;
+    padding: 10px 20px;
+    cursor: pointer;
+    font-size: 0.9rem;
+    font-weight: 500;
+    transition: all 0.3s ease;
+}
+
+.fechar-ranking-btn:hover {
+    background-color: #d32f2f;
+    transform: translateY(-2px);
+}
+
+.ranking-grid {
+    display: flex;
+    flex-direction: column;
+    gap: 15px;
+}
+
+.ranking-card {
+    background-color: var(--dark-card);
+    border-radius: 10px;
+    overflow: hidden;
+    cursor: pointer;
+    transition: transform 0.2s, box-shadow 0.2s;
+    border: 2px solid transparent;
+    min-height: 170px;
+    display: flex;
+    align-items: stretch;
+    padding: 2px;
+}
+
+.ranking-card:hover {
+    transform: translateX(+5px);
+    box-shadow: 0 8px 20px rgba(0, 0, 0, 0.5);
+    border-color: lightblue;
+}
+
+/* Posição do ranking (coluna à esquerda) */
+.ranking-posicao-coluna {
+    width: 80px;
+    flex-shrink: 0;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 20px 15px;
+    background-color: var(--dark-card);
+}
+
+/* Número da posição */
+.ranking-numero {
+    font-size: 2.5rem;
+    font-weight: bold;
+    color: var(--dark-text);
+    line-height: 1;
+    margin-bottom: 5px;
+}
+
+/* Medalha da posição */
+.ranking-medalha {
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.2rem;
+    font-weight: bold;
+    box-shadow: 0 3px 8px rgba(0, 0, 0, 0.3);
+}
+
+/* Cores das medalhas */
+.ranking-medalha.ouro {
+    background: linear-gradient(135deg, #ffd700, #ffed4e);
+    color: #333;
+}
+
+.ranking-medalha.prata {
+    background: linear-gradient(135deg, #c0c0c0, #e0e0e0);
+    color: #333;
+}
+
+.ranking-medalha.bronze {
+    background: linear-gradient(135deg, #cd7f32, #e6a15c);
+    color: white;
+}
+
+.ranking-medalha.outros {
+    background: var(--dark-card);
+    color: white;
+    width: 2px;
+    height: 2px;
+    font-size: 0.6rem;
+}
+
+/* Foto do ranking (segunda coluna) */
+.ranking-foto-container {
+    width: 150px;
+    height: 170px;
+    flex-shrink: 0;
+    overflow: hidden;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 2.5rem;
+    font-weight: bold;
+    color: white;
+    border: 1px solid white;
+}
+
+.ranking-foto-container img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+}
+
+/* Informações do ranking (terceira coluna - principal) */
+.ranking-info-container {
+    flex: 1;
+    display: flex;
+    padding: 20px;
+    gap: 20px;
+    align-items: center;
+}
+
+.ranking-info {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+
+.ranking-nome {
+    font-size: 1.5rem;
+    font-weight: bold;
+    color: var(--dark-text);
+    margin: 0;
+}
+
+.ranking-departamento {
+    font-size: 1.2rem;
+    color: var(--dark-secondary-text);
+    margin: 0;
+    font-weight: 600;
+}
+
+.ranking-cargo {
+    font-size: 1rem;
+    color: var(--dark-text);
+    font-weight: 600;
+    margin: 0;
+    background-color: rgba(255, 255, 255, 0.1);
+    padding: 8px 15px;
+    border-radius: 8px;
+    display: inline-block;
+    width: fit-content;
+    border-left: 8px solid;
+}
+
+/* Estatísticas à direita */
+.ranking-stats {
+    display: flex;
+    gap: 25px;
+    align-items: center;
+}
+
+.stat-item-ranking {
+    text-align: center;
+    padding: 0 10px;
+    min-width: 100px;
+}
+
+.stat-title-ranking {
+    font-size: 0.8rem;
+    color: var(--dark-text);
+    margin-bottom: 8px;
+    font-weight: 500;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.stat-value-ranking {
+    font-size: 1.3rem;
+    font-weight: bold;
+    color: var(--dark-secondary-text);
+}
+
+.stat-value-ranking.currency {
+    color: var(--dark-secondary-text);
+    font-family: 'Courier New', monospace;
+    font-size: 1.3rem;
+}
+
+/* Barra de progresso no ranking */
+.ranking-progress {
+    width: 80px;
+    height: 80px;
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+}
+
+.ranking-progress-circle {
+    width: 100%;
+    height: 100%;
+    border-radius: 50%;
+    position: relative;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.ranking-progress-circle::before {
+    content: "";
+    position: absolute;
+    width: 50px;
+    height: 50px;
+    background-color: var(--dark-card);
+    border-radius: 50%;
+}
+
+.ranking-progress-value {
+    position: relative;
+    z-index: 2;
+    font-size: 1rem;
+    font-weight: bold;
+    color: var(--dark-text);
+}
+
+/* Pontuação abaixo do gráfico */
+.ranking-pontuacao {
+    margin-top: 15px;
+    font-size: 1rem;
+    color: var(--dark-secondary-text);
+    font-weight: 500;
+    text-align: center;
+}
+
+.ranking-pontuacao-valor {
+    color: var(--dark-text);
+    font-weight: bold;
+    font-size: 1rem;
+    margin-left: 3px;
+}
+
+/* Linha divisória entre posição e foto */
+.ranking-card > *:not(:last-child) {
+    border-right: 1px solid var(--modal-border);
+}
+
+/* Responsividade */
+@media (max-width: 1024px) {
+    .ranking-stats {
+        flex-wrap: wrap;
+        justify-content: flex-start;
+        gap: 15px;
+    }
+    
+    .stat-item-ranking {
+        min-width: 80px;
+    }
+}
+
+@media (max-width: 768px) {
+    .ranking-card {
+        flex-direction: column;
+        min-height: auto;
+    }
+    
+    .ranking-posicao-coluna {
+        width: 100%;
+        flex-direction: row;
+        justify-content: space-between;
+        padding: 15px;
+        border-bottom: 1px solid var(--modal-border);
+    }
+    
+    .ranking-numero {
+        font-size: 2rem;
+        margin-bottom: 0;
+    }
+    
+    .ranking-foto-container {
+        width: 100%;
+        height: 200px;
+        border-right: none;
+        border-bottom: 1px solid var(--modal-border);
+    }
+    
+    .ranking-info-container {
+        flex-direction: column;
+        padding: 15px;
+        gap: 15px;
+        text-align: center;
+    }
+    
+    .ranking-cargo {
+        margin: 0 auto;
+    }
+    
+    .ranking-stats {
+        justify-content: center;
+    }
+    
+    /* Remove bordas laterais em mobile */
+    .ranking-card > * {
+        border-right: none !important;
+    }
+}
