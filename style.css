@@ -1356,6 +1356,11 @@ h1 {
 }
 
 .complexidade-count.complexidade-C {
+    background-color: #ef8a50;
+    color: #fff;
+}
+
+.complexidade-count.complexidade-D {
     background-color: #ef5350;
     color: #fff;
 }
@@ -1532,6 +1537,11 @@ h1 {
 }
 
 .complexidade-C {
+    background-color: #ff711f;
+    color: #fff;
+}
+
+.complexidade-D {
     background-color: #ef5350;
     color: #fff;
 }

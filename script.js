@@ -536,11 +536,12 @@ function renderizarModalTime(timeNum, member) {
     //  GRÁFICOS DE BARRAS + PROGRESSO
     // ===============================
     const complexidadeCounts = m.COMPLEXIDADE_COUNT;
-    const maxCount = Math.max(complexidadeCounts.A, complexidadeCounts.B, complexidadeCounts.C);
+    const maxCount = Math.max(complexidadeCounts.A, complexidadeCounts.B, complexidadeCounts.C, complexidadeCounts.D);
 
     const barHeightA = maxCount ? (complexidadeCounts.A / maxCount) * 100 : 0;
     const barHeightB = maxCount ? (complexidadeCounts.B / maxCount) * 100 : 0;
     const barHeightC = maxCount ? (complexidadeCounts.C / maxCount) * 100 : 0;
+    const barHeightD = maxCount ? (complexidadeCounts.D / maxCount) * 100 : 0;
 
     const finalProgressPercentage = m.PROGRESSO_VALOR;
     const finalProgressAngle = (finalProgressPercentage / 100) * 360;
@@ -584,6 +585,13 @@ function renderizarModalTime(timeNum, member) {
                             <div class="bar" style="height:${barHeightC}%; background:${color};"></div>
                         </div>
                         <span class="bar-value">${complexidadeCounts.C}</span>
+                    </div>
+                    <div class="bar-chart-item">
+                        <span class="bar-label">D</span>
+                        <div class="bar-container">
+                            <div class="bar" style="height:${barHeightD}%; background:${color};"></div>
+                        </div>
+                        <span class="bar-value">${complexidadeCounts.D}</span>
                     </div>
                 </div>
             </div>
@@ -679,7 +687,7 @@ function calcularDadosFiltrados(member, competenciaFiltro) {
     }, 0);
     memberFiltrado.STAT_3_VALOR = memberFiltrado.FATURAMENTO_TOTAL;
 
-    memberFiltrado.COMPLEXIDADE_COUNT = { 'A': 0, 'B': 0, 'C': 0 };
+    memberFiltrado.COMPLEXIDADE_COUNT = { 'A': 0, 'B': 0, 'C': 0, 'D': 0 };
     clientesFiltrados.forEach(c => {
         const cx = (c.Complexidade || c.complexidade || '').toUpperCase();
         if (memberFiltrado.COMPLEXIDADE_COUNT[cx] !== undefined) memberFiltrado.COMPLEXIDADE_COUNT[cx]++;
@@ -802,7 +810,7 @@ function abrirClientesSidebarComparacao(memberId, timeNum) {
                 gruposMap.set(grupo, {
                     nome: grupo,
                     clientes: [],
-                    complexidades: { 'A': 0, 'B': 0, 'C': 0 },
+                    complexidades: { 'A': 0, 'B': 0, 'C': 0, 'D': 0 },
                     faturamentoTotal: 0
                 });
             }
@@ -985,6 +993,7 @@ function renderGruposViewComparacao(grupos) {
                         <span class="complexidade-count complexidade-A">A: ${grupo.complexidades['A'] || 0}</span>
                         <span class="complexidade-count complexidade-B">B: ${grupo.complexidades['B'] || 0}</span>
                         <span class="complexidade-count complexidade-C">C: ${grupo.complexidades['C'] || 0}</span>
+                        <span class="complexidade-count complexidade-D">D: ${grupo.complexidades['D'] || 0}</span>
                     </div>
                 </div>
                 <div class="cliente-details">
@@ -1118,7 +1127,7 @@ function aggregateData() {
             DATA_ADMISSAO: collab.Admissão || 'N/A',
             FOTO_URL: collab.FOTO_URL || '',
             COMPETENCIAS: new Set(),
-            COMPLEXIDADE_COUNT: { 'A': 0, 'B': 0, 'C': 0 },
+            COMPLEXIDADE_COUNT: { 'A': 0, 'B': 0, 'C': 0, 'D': 0 },
             FATURAMENTO_TOTAL: 0,
             CLIENTES_TOTAIS: 0,
             STATUS_PERCENTUAL: 0, // NOVO CAMPO
@@ -1354,7 +1363,7 @@ function recalculateAggregations(filteredCollaborators) {
     filteredCollaborators.forEach(collab => {
         collaboratorMap.set(collab.NOME, {
             ...collab,
-            COMPLEXIDADE_COUNT: { 'A': 0, 'B': 0, 'C': 0 },
+            COMPLEXIDADE_COUNT: { 'A': 0, 'B': 0, 'C': 0, 'D': 0 },
             FATURAMENTO_TOTAL: 0,
             CLIENTES_TOTAIS: 0,
             COMPETENCIAS: new Set(),
@@ -2074,10 +2083,11 @@ function renderModals(data) {
             rankEmoji = "🥉";
         }
 
-        const maxCount = Math.max(complexidadeCounts['A'], complexidadeCounts['B'], complexidadeCounts['C']);
+        const maxCount = Math.max(complexidadeCounts['A'], complexidadeCounts['B'], complexidadeCounts['C',complexidadeCounts['D']]);
         const barHeightA = maxCount > 0 ? (complexidadeCounts['A'] / maxCount) * 100 : (complexidadeCounts['A'] > 0 ? 20 : 0);
         const barHeightB = maxCount > 0 ? (complexidadeCounts['B'] / maxCount) * 100 : (complexidadeCounts['B'] > 0 ? 20 : 0);
         const barHeightC = maxCount > 0 ? (complexidadeCounts['C'] / maxCount) * 100 : (complexidadeCounts['C'] > 0 ? 20 : 0);
+        const barHeightD = maxCount > 0 ? (complexidadeCounts['D'] / maxCount) * 100 : (complexidadeCounts['D'] > 0 ? 20 : 0);
 
         // Formata pontuação
         const pontuacaoFormatada = pontuacaoTotal.toLocaleString('pt-BR', {
@@ -2110,6 +2120,13 @@ function renderModals(data) {
                                 <div class="bar" style="height: ${barHeightC}%; background-color: ${color};"></div>
                             </div>
                             <span class="bar-value">${complexidadeCounts['C']}</span>
+                        </div>
+                        <div class="bar-chart-item">
+                            <span class="bar-label">D</span>
+                            <div class="bar-container">
+                                <div class="bar" style="height: ${barHeightD}%; background-color: ${color};"></div>
+                            </div>
+                            <span class="bar-value">${complexidadeCounts['D']}</span>
                         </div>
                     </div>
                 </div>
@@ -2200,7 +2217,7 @@ function abrirClientesSidebar(memberId) {
     
     // Ordenar clientes por complexidade (A -> B -> C)
     clientes.sort((a, b) => {
-        const ordemComplexidade = { 'A': 1, 'B': 2, 'C': 3 };
+        const ordemComplexidade = { 'A': 1, 'B': 2, 'C': 3, 'D':4 };
         return ordemComplexidade[a.complexidade] - ordemComplexidade[b.complexidade];
     });
 
@@ -2212,7 +2229,7 @@ function abrirClientesSidebar(memberId) {
             gruposMap.set(grupo, {
                 nome: grupo,
                 clientes: [],
-                complexidades: { 'A': 0, 'B': 0, 'C': 0 },
+                complexidades: { 'A': 0, 'B': 0, 'C': 0, 'D': 0 },
                 faturamentoTotal: 0
             });
         }
@@ -2404,6 +2421,7 @@ function renderGruposView(grupos) {
                         <span class="complexidade-count complexidade-A">A: ${grupo.complexidades['A'] || 0}</span>
                         <span class="complexidade-count complexidade-B">B: ${grupo.complexidades['B'] || 0}</span>
                         <span class="complexidade-count complexidade-C">C: ${grupo.complexidades['C'] || 0}</span>
+                        <span class="complexidade-count complexidade-D">D: ${grupo.complexidades['D'] || 0}</span>
                     </div>
                 </div>
                 <div class="cliente-details">
