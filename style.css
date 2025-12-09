@@ -553,7 +553,7 @@ h1 {
 .bar-label {
     font-size: 0.9rem;
     font-weight: bold;
-    color: var(--dark-secondary-text);
+    color: var(--positive-color);
     margin-bottom: 5px;
 }
 
@@ -684,21 +684,6 @@ h1 {
 /* SIDEBAR DE CLIENTES */
 /* ============================================= */
 
-.clientes-sidebar {
-    position: fixed;
-    top: 0;
-    right: -450px;
-    width: 600px;
-    height: 100vh;
-    background-color: var(--dark-background);
-    border-left: 1px solid var(--modal-border);
-    box-shadow: -5px 0 15px rgba(0, 0, 0, 0.5);
-    z-index: 1001;
-    transition: right 0.3s ease;
-    display: flex;
-    flex-direction: column;
-    overflow: hidden;
-}
 
 .clientes-sidebar.visible {
     right: 0;
@@ -819,18 +804,16 @@ h1 {
 }
 
 .cliente-item {
-    background-color: var(--dark-card);
+    background-color: var(--positive-color);
     border: 1px solid var(--modal-border);
     border-radius: 8px;
     padding: 1px;
     width: 100%;
-    transition: transform 0.2s, box-shadow 0.2s;
 }
 
 .cliente-item:hover {
-    transform: translateX(+1px);
-    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.3);
-    border: 1px solid lightblue;
+    transform: translateX(+3px);
+    border: 5px solid red;
 }
 
 .cliente-header {
@@ -891,7 +874,7 @@ h1 {
 }
 
 .detail-value {
-    color: var(--dark-text);
+    color: var(--positive-color);
     font-weight: 500;
 }
 
@@ -1123,6 +1106,226 @@ h1 {
     color: white;
 }
 
+/* Estilos para a comparação lado a lado */
+.clientes-main-content.comparativo .clientes-content.comparativo {
+    display: flex;
+    flex-direction: column;
+    height: 100%;
+}
+
+.comparacao-container {
+    display: grid;
+    grid-template-columns: 1fr 1fr; /* Mantém 2 colunas iguais */
+    gap: 10px !important; /* Aumenta o espaço entre colunas */
+    height: 100%;
+    background-color: #2b2b2b;
+    overflow: hidden;
+    padding: 0 5px; /* Adiciona padding nas laterais */
+}
+
+.colaborador-coluna {
+    display: flex;
+    flex-direction: column;
+    height: 100%;
+    border-radius: 8px;
+    overflow: hidden;
+    background: var(--card-bg);
+    border: 1px solid var(--border-color);
+    padding: 15px !important; /* Adiciona padding interno */
+}
+
+.colaborador-header {
+    padding: 3px;
+    color: white;
+    text-align: center;
+    border-radius: 10px;
+}
+
+.colaborador-header h3 {
+    margin: 0;
+    font-size: 1.1rem;
+    font-weight: 600;
+}
+
+.filtro-info {
+    font-size: 0.85rem;
+    opacity: 0.9;
+    margin-top: 5px;
+}
+
+.clientes-colaborador,
+.grupos-colaborador {
+    flex: 1;
+    overflow-y: auto;
+    padding: 15px;
+}
+
+.cliente-item.empty {
+    text-align: center;
+    padding: 40px 20px;
+    color: var(--dark-secondary-text);
+}
+
+.detail-value.highlight {
+    font-weight: 600;
+    color: var(--primary-color);
+}
+
+/* Estilos para o resumo comparativo */
+.resumo-comparativo {
+    padding: 10px;
+}
+
+.resumo-header {
+    text-align: center;
+    margin-bottom: 30px;
+}
+
+.resumo-header h3 {
+    margin: 0 0 5px 0;
+    color: var(--text-color);
+}
+
+.resumo-header p {
+    margin: 0;
+    color: var(--dark-secondary-text);
+    font-size: 0.9rem;
+}
+
+.comparacao-metricas {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+    gap: 15px;
+    margin-bottom: 30px;
+}
+
+.metrica-item {
+    padding: 15px;
+    background: var(--card-bg);
+    border-radius: 8px;
+    border: 1px solid var(--border-color);
+}
+
+.metrica-item.vencedor {
+    border-color: var(--success-color);
+    background: rgba(76, 175, 80, 0.05);
+}
+
+.metrica-titulo {
+    font-size: 0.9rem;
+    color: var(--dark-secondary-text);
+    margin-bottom: 10px;
+    text-align: center;
+}
+
+.metrica-valores {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.valor-col1,
+.valor-col2 {
+    font-size: 1.2rem;
+    font-weight: 600;
+    color: var(--text-color);
+}
+
+.valor-col1.vencedor {
+    color: var(--success-color);
+}
+
+.valor-col2.vencedor {
+    color: var(--success-color);
+}
+
+.vs {
+    color: var(--dark-secondary-text);
+    font-size: 0.9rem;
+}
+
+.complexidade-comparativa {
+    background: var(--card-bg);
+    padding: 20px;
+    border-radius: 8px;
+    border: 1px solid var(--border-color);
+}
+
+.complexidade-comparativa h4 {
+    margin: 0 0 15px 0;
+    text-align: center;
+    color: var(--text-color);
+}
+
+.complexidade-bars {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 30px;
+    height: 200px;
+}
+
+.complexidade-bar-col {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+}
+
+.bar-label {
+    margin-bottom: 10px;
+    font-size: 0.9rem;
+    color: var(--text-color);
+    font-weight: 500;
+}
+
+.complexidade-bar-col .bar-container {
+    display: flex;
+    align-items: flex-end;
+    justify-content: space-around;
+    width: 100%;
+    height: 150px;
+    border-bottom: 1px solid var(--border-color);
+    position: relative;
+}
+
+.complexidade-bar-col .bar {
+    width: 22%;
+    position: relative;
+    border-radius: 4px 4px 0 0;
+    transition: height 0.3s ease;
+}
+
+.complexidade-bar-col .bar.complexidade-A {
+    background: #2e7d32;
+}
+
+.complexidade-bar-col .bar.complexidade-B {
+    background: #f9a825;
+}
+
+.complexidade-bar-col .bar.complexidade-C {
+    background: #ef6c00;
+}
+
+.complexidade-bar-col .bar.complexidade-D {
+    background: #c62828;
+}
+
+/* Ajustes responsivos */
+@media (max-width: 768px) {
+    .comparacao-container {
+        grid-template-columns: 1fr 1fr;
+    }
+    
+    .comparacao-metricas {
+        grid-template-columns: 1fr;
+    }
+    
+    .complexidade-bars {
+        grid-template-columns: 1fr;
+        gap: 20px;
+        height: auto;
+    }
+}
 /* ============================================= */
 /* UPLOAD DE ARQUIVOS */
 /* ============================================= */
@@ -1173,6 +1376,11 @@ h1 {
     font-weight: 600;
     cursor: pointer;
     transition: all 0.2s ease;
+}
+
+.processar-btn:hover {
+    background: linear-gradient(135deg, #31dfa7, #10b981);
+   transform: translateY(-2px) 
 }
 
 .processar-btn:disabled {
@@ -1426,59 +1634,6 @@ h1 {
 /* RESUMOS */
 /* ============================================= */
 
-.resumo-total {
-    background: linear-gradient(135deg, #053e89, #1a56c7) !important;
-    border: 1px solid #2468e6 !important;
-    border-radius: 10px !important;
-    padding: 20px !important;
-    margin-bottom: 20px !important;
-    box-shadow: 0 4px 15px rgba(5, 62, 137, 0.3) !important;
-}
-
-.resumo-total .cliente-header {
-    margin-bottom: 15px !important;
-    border-bottom: 1px solid rgba(255, 255, 255, 0.3) !important;
-    padding-bottom: 10px !important;
-}
-
-.resumo-total .cliente-nome {
-    color: white !important;
-    font-size: 1.1rem !important;
-    font-weight: 700 !important;
-    text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.3) !important;
-}
-
-.resumo-total .cliente-details {
-    display: grid !important;
-    grid-template-columns: 1fr 1fr !important;
-    gap: 15px !important;
-}
-
-.resumo-total .cliente-detail {
-    display: flex !important;
-    flex-direction: column !important;
-    align-items: center !important;
-    text-align: center !important;
-    padding: 10px !important;
-    background: rgba(255, 255, 255, 0.1) !important;
-    border-radius: 8px !important;
-    border: 1px solid rgba(255, 255, 255, 0.2) !important;
-}
-
-.resumo-total .detail-label {
-    color: rgba(255, 255, 255, 0.9) !important;
-    font-size: 0.85rem !important;
-    margin-bottom: 5px !important;
-    font-weight: 500 !important;
-}
-
-.resumo-total .detail-value {
-    color: white !important;
-    font-weight: 700 !important;
-    font-size: 1.1rem !important;
-    text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.3) !important;
-}
-
 .cliente-item {
     margin-bottom: 12px;
 }
@@ -1559,17 +1714,16 @@ h1 {
 }
 
 .detail-label {
-    color: var(--dark-secondary-text);
+    color: var(--dark-text);
     font-size: 0.85rem;
     margin-bottom: 4px;
-    font-weight: 500;
-}
-
-.detail-value {
-    color: var(--dark-text);
     font-weight: 600;
 }
 
+.detail-value {
+    color: var(--dark-secondary-text);
+    font-weight: 500;
+}
 
 /* ============================================= */
 /* NAVEGAÇÃO COM SETAS */
@@ -1786,9 +1940,8 @@ h1 {
 .comparacao-sidebar .clientes-sidebar-header,
 .clientes-sidebar .clientes-sidebar-header {
     background-color: #0b46b8;
-    color: white;
+    color: rgb(250, 0, 0);
     font-weight: 600;
-    padding: 15px 20px;
     font-size: 1.1rem;
     display: flex;
     align-items: center;
@@ -1837,7 +1990,7 @@ h1 {
 .comparacao-sidebar .cliente-details,
 .clientes-sidebar .cliente-details {
     font-size: 0.85rem;
-    color: #ccc;
+    color: white;
     display: flex;
     flex-wrap: wrap;
     gap: 10px 20px;
@@ -1900,8 +2053,8 @@ h1 {
 .clientes-sidebar {
     position: fixed;
     top: 0;
-    right: -450px;
-    width: 450px;
+    right: -1200px;
+    width: 1200px;
     height: 100vh;
     background-color: var(--dark-background);
     border-left: 1px solid var(--modal-border);
@@ -1989,9 +2142,9 @@ h1 {
     background: linear-gradient(135deg, #053e89, #1a56c7) !important;
     border: 1px solid #2468e6 !important;
     border-radius: 10px !important;
-    padding: 20px !important;
+    padding: 10px !important;
     margin-bottom: 20px !important;
-    box-shadow: 0 4px 15px rgba(5, 62, 137, 0.3) !important;
+    box-shadow: 0 4px 15px rgba(5, 62, 137, 0.39) !important;
     position: static !important;
     top: auto !important;
     z-index: auto !important;
@@ -2012,7 +2165,7 @@ h1 {
 
 .resumo-total .cliente-details {
     display: grid !important;
-    grid-template-columns: 1fr 1fr !important;
+    grid-template-columns: 1fr 1fr 1fr !important;
     gap: 15px !important;
 }
 
@@ -2029,15 +2182,14 @@ h1 {
 
 .resumo-total .detail-label {
     color: rgba(255, 255, 255, 0.9) !important;
-    font-size: 0.85rem !important;
-    margin-bottom: 5px !important;
-    font-weight: 500 !important;
+    font-weight: 700 !important;
+    font-size: 1rem !important;
 }
 
 .resumo-total .detail-value {
     color: white !important;
-    font-weight: 700 !important;
-    font-size: 1.1rem !important;
+    font-weight: 500 !important;
+    font-size: 1rem !important;
     text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.3) !important;
 }
 

@@ -514,8 +514,9 @@ function renderizarModalTime(timeNum, member) {
     //   PONTUAÇÃO / RANK / RANK TOTAL
     // ===============================
     const tarefasColab = taskData.filter(t =>
-        (t.Responsável || t.Responsavel || t["responsavel"]) === m.NOME
-    );
+        (t.Responsável || t.Responsavel || t["responsavel"]) === m.NOME);
+
+    
 
     const pontuacaoTotal = tarefasColab.reduce((s, t) => s + (parseInt(t.Pontuação) || 0), 0);
 
@@ -754,131 +755,629 @@ function calcularDadosFiltrados(member, competenciaFiltro) {
  * Abre o sidebar de clientes na comparação
  */
 function abrirClientesSidebarComparacao(memberId, timeNum) {
-    const member = teamData.find(m => m.ID === memberId);
-    if (!member) return;
-
-    // Obtém o filtro de competência do time
-    const filtroCompetencia = document.getElementById(`filtro-competencia-${timeNum}`).value;
-    
-    const clientes = getClientesDoColaboradorComFiltro(member.NOME, filtroCompetencia);
     const sidebar = document.getElementById('clientes-sidebar');
     const overlay = document.getElementById('sidebar-overlay');
     const clientesList = document.getElementById('clientes-list');
 
     if (!sidebar || !overlay || !clientesList) return;
 
-    // Atualiza o título do sidebar com informação do filtro
-    const titleElement = sidebar.querySelector('.clientes-sidebar-title');
-    if (titleElement) {
-        let titleText = `${member.NOME}`;
-        if (filtroCompetencia) {
-            titleText += ` - ${filtroCompetencia}`;
-        }
-        titleElement.textContent = titleText;
-    }
+    // Verifica se ambos os times têm colaboradores selecionados
+    if (!time1Colaborador || !time2Colaborador) {
+        // Se não tiver ambos, mostra apenas o colaborador clicado (comportamento original)
+        const member = teamData.find(m => m.ID === memberId);
+        if (!member) return;
 
-    // Renderiza a lista de clientes
-    if (clientes.length === 0) {
-        let mensagem = 'Nenhum cliente encontrado para este colaborador';
-        if (filtroCompetencia) {
-            mensagem += ` com a competência "${filtroCompetencia}"`;
+        const filtroCompetencia = document.getElementById(`filtro-competencia-${timeNum}`).value;
+        const clientes = getClientesDoColaboradorComFiltro(member.NOME, filtroCompetencia);
+        
+        // Atualiza o título do sidebar com informação do filtro
+        const titleElement = sidebar.querySelector('.clientes-sidebar-title');
+        if (titleElement) {
+            let titleText = `${member.NOME}`;
+            if (filtroCompetencia) {
+                titleText += ` - ${filtroCompetencia}`;
+            }
+            titleElement.textContent = titleText;
         }
-        clientesList.innerHTML = `
-            <div class="clientes-main-content">
-                <div class="clientes-toggle-container">
-                    <div class="clientes-toggle-buttons">
-                        <button class="toggle-btn active" data-view="clientes">Clientes</button>
-                        <button class="toggle-btn" data-view="grupos">Grupos</button>
-                    </div>
-                </div>
-                <div class="clientes-content">
-                    <div id="clientes-view" class="clientes-view">
-                        <div class="cliente-item" style="text-align: center; color: var(--dark-secondary-text); padding: 30px;">
-                            ${mensagem}
+
+        // Renderiza a lista de clientes
+        if (clientes.length === 0) {
+            let mensagem = 'Nenhum cliente encontrado para este colaborador';
+            if (filtroCompetencia) {
+                mensagem += ` com a competência "${filtroCompetencia}"`;
+            }
+            clientesList.innerHTML = `
+                <div class="clientes-main-content">
+                    <div class="clientes-toggle-container">
+                        <div class="clientes-toggle-buttons">
+                            <button class="toggle-btn active" data-view="clientes">Clientes</button>
+                            <button class="toggle-btn" data-view="grupos">Grupos</button>
                         </div>
                     </div>
-                    <div id="grupos-view" class="grupos-view" style="display: none;"></div>
-                </div>
-            </div>
-        `;
-    } else {
-        // Calcular grupos para a view de grupos
-        const gruposMap = new Map();
-        clientes.forEach(cliente => {
-            const grupo = cliente.grupo || 'Sem Grupo';
-            if (!gruposMap.has(grupo)) {
-                gruposMap.set(grupo, {
-                    nome: grupo,
-                    clientes: [],
-                    complexidades: { 'A': 0, 'B': 0, 'C': 0, 'D': 0 },
-                    faturamentoTotal: 0
-                });
-            }
-            
-            const grupoData = gruposMap.get(grupo);
-            grupoData.clientes.push(cliente);
-            if (grupoData.complexidades[cliente.complexidade] !== undefined) {
-                grupoData.complexidades[cliente.complexidade]++;
-            }
-            grupoData.faturamentoTotal += cliente.faturamento;
-        });
-
-        const grupos = Array.from(gruposMap.values());
-
-        // Renderizar views
-        const clientesViewHTML = renderClientesViewComparacao(clientes);
-        const gruposViewHTML = renderGruposViewComparacao(grupos);
-
-        const sidebarContent = `
-            <div class="clientes-main-content">
-                <div class="clientes-toggle-container">
-                    <div class="clientes-toggle-buttons">
-                        <button class="toggle-btn active" data-view="clientes">Clientes</button>
-                        <button class="toggle-btn" data-view="grupos">Grupos</button>
+                    <div class="clientes-content">
+                        <div id="clientes-view" class="clientes-view">
+                            <div class="cliente-item" style="text-align: center; color: var(--dark-secondary-text); padding: 30px;">
+                                ${mensagem}
+                            </div>
+                        </div>
+                        <div id="grupos-view" class="grupos-view" style="display: none;"></div>
                     </div>
                 </div>
-                <div class="clientes-content">
-                    ${clientesViewHTML}
-                    ${gruposViewHTML}
+            `;
+        } else {
+            // Calcular grupos para a view de grupos
+            const gruposMap = new Map();
+            clientes.forEach(cliente => {
+                const grupo = cliente.grupo || 'Sem Grupo';
+                if (!gruposMap.has(grupo)) {
+                    gruposMap.set(grupo, {
+                        nome: grupo,
+                        clientes: [],
+                        complexidades: { 'A': 0, 'B': 0, 'C': 0, 'D': 0 },
+                        faturamentoTotal: 0
+                    });
+                }
+                
+                const grupoData = gruposMap.get(grupo);
+                grupoData.clientes.push(cliente);
+                if (grupoData.complexidades[cliente.complexidade] !== undefined) {
+                    grupoData.complexidades[cliente.complexidade]++;
+                }
+                grupoData.faturamentoTotal += cliente.faturamento;
+            });
+
+            const grupos = Array.from(gruposMap.values());
+
+            // Renderizar views
+            const clientesViewHTML = renderClientesViewComparacao(clientes);
+            const gruposViewHTML = renderGruposViewComparacao(grupos);
+
+            const sidebarContent = `
+                <div class="clientes-main-content">
+                    <div class="clientes-toggle-container">
+                        <div class="clientes-toggle-buttons">
+                            <button class="toggle-btn active" data-view="clientes">Clientes</button>
+                            <button class="toggle-btn" data-view="grupos">Grupos</button>
+                        </div>
+                    </div>
+                    <div class="clientes-content">
+                        ${clientesViewHTML}
+                        ${gruposViewHTML}
+                    </div>
+                </div>
+            `;
+
+            clientesList.innerHTML = sidebarContent;
+
+            // Adicionar event listeners aos botões de toggle
+            setTimeout(() => {
+                const toggleButtons = clientesList.querySelectorAll('.toggle-btn');
+                const clientesView = document.getElementById('clientes-view');
+                const gruposView = document.getElementById('grupos-view');
+                
+                // Inicialmente mostrar apenas clientes
+                if (gruposView) gruposView.style.display = 'none';
+                
+                toggleButtons.forEach(btn => {
+                    btn.addEventListener('click', function() {
+                        // Remover active de todos
+                        toggleButtons.forEach(b => b.classList.remove('active'));
+                        // Adicionar active ao clicado
+                        this.classList.add('active');
+                        
+                        const view = this.getAttribute('data-view');
+                        
+                        if (view === 'clientes') {
+                            if (clientesView) clientesView.style.display = 'block';
+                            if (gruposView) gruposView.style.display = 'none';
+                        } else {
+                            if (clientesView) clientesView.style.display = 'none';
+                            if (gruposView) gruposView.style.display = 'block';
+                        }
+                    });
+                });
+            }, 100);
+        }
+
+        // Abre o sidebar
+        sidebar.classList.add('visible');
+        overlay.classList.add('visible');
+        return;
+    }
+
+    // ==============================================
+    // COMPARAÇÃO COM AMBOS OS COLABORADORES
+    // ==============================================
+    
+    // Obtém dados de AMBOS os colaboradores
+    const colaborador1 = time1Colaborador;
+    const colaborador2 = time2Colaborador;
+    
+    const filtroCompetencia1 = document.getElementById('filtro-competencia-1').value;
+    const filtroCompetencia2 = document.getElementById('filtro-competencia-2').value;
+    
+    const clientes1 = getClientesDoColaboradorComFiltro(colaborador1.NOME, filtroCompetencia1);
+    const clientes2 = getClientesDoColaboradorComFiltro(colaborador2.NOME, filtroCompetencia2);
+
+    // Atualiza o título do sidebar
+    const titleElement = sidebar.querySelector('.clientes-sidebar-title');
+    if (titleElement) {
+        titleElement.textContent = `Comparação: ${colaborador1.NOME} vs ${colaborador2.NOME}`;
+    }
+
+    // Renderiza a visão comparativa com ambos os colaboradores
+    const sidebarContent = `
+        <div class="clientes-main-content comparativo">
+            <div class="clientes-toggle-container">
+                <div class="clientes-toggle-buttons">
+                    <button class="toggle-btn active" data-view="clientes">Clientes</button>
+                    <button class="toggle-btn" data-view="grupos">Grupos</button>
                 </div>
             </div>
-        `;
+            <div class="clientes-content comparativo">
+                <!-- View de Clientes (lado a lado) -->
+                <div id="clientes-view" class="clientes-view comparativo" style="display: block;">
+                    <div class="comparacao-container">
+                        <!-- Colaborador 1 (Esquerda) -->
+                        <div class="colaborador-coluna">
+                            <div class="colaborador-header" style="background: ${roleStripColorMap[colaborador1.CARGO] || roleStripColorMap['Outros']}">
+                                <h3>${colaborador1.NOME}</h3>
+                                ${filtroCompetencia1 ? `<div class="filtro-info">Filtro: ${filtroCompetencia1}</div>` : ''}
+                            </div>
+                            <div class="clientes-colaborador">
+                                ${renderClientesViewComparacaoColaborador(clientes1, colaborador1)}
+                            </div>
+                        </div>
+                        
+                        <!-- Colaborador 2 (Direita) -->
+                        <div class="colaborador-coluna">
+                            <div class="colaborador-header" style="background: ${roleStripColorMap[colaborador2.CARGO] || roleStripColorMap['Outros']}">
+                                <h3>${colaborador2.NOME}</h3>
+                                ${filtroCompetencia2 ? `<div class="filtro-info">Filtro: ${filtroCompetencia2}</div>` : ''}
+                            </div>
+                            <div class="clientes-colaborador">
+                                ${renderClientesViewComparacaoColaborador(clientes2, colaborador2)}
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- View de Grupos (lado a lado) -->
+                <div id="grupos-view" class="grupos-view comparativo" style="display: none;">
+                    <div class="comparacao-container">
+                        <!-- Colaborador 1 -->
+                        <div class="colaborador-coluna">
+                            <div class="colaborador-header" style="background: ${roleStripColorMap[colaborador1.CARGO] || roleStripColorMap['Outros']}">
+                                <h3>${colaborador1.NOME} - Grupos</h3>
+                            </div>
+                            <div class="grupos-colaborador">
+                                ${renderGruposViewComparacaoColaborador(clientes1, colaborador1)}
+                            </div>
+                        </div>
+                        
+                        <!-- Colaborador 2 -->
+                        <div class="colaborador-coluna">
+                            <div class="colaborador-header" style="background: ${roleStripColorMap[colaborador2.CARGO] || roleStripColorMap['Outros']}">
+                                <h3>${colaborador2.NOME} - Grupos</h3>
+                            </div>
+                            <div class="grupos-colaborador">
+                                ${renderGruposViewComparacaoColaborador(clientes2, colaborador2)}
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    `;
 
-        clientesList.innerHTML = sidebarContent;
+    clientesList.innerHTML = sidebarContent;
 
-        // Adicionar event listeners aos botões de toggle
-        setTimeout(() => {
-            const toggleButtons = clientesList.querySelectorAll('.toggle-btn');
-            const clientesView = document.getElementById('clientes-view');
-            const gruposView = document.getElementById('grupos-view');
-            
-            // Inicialmente mostrar apenas clientes
-            if (gruposView) gruposView.style.display = 'none';
-            
-            toggleButtons.forEach(btn => {
-                btn.addEventListener('click', function() {
-                    // Remover active de todos
-                    toggleButtons.forEach(b => b.classList.remove('active'));
-                    // Adicionar active ao clicado
-                    this.classList.add('active');
-                    
-                    const view = this.getAttribute('data-view');
-                    
-                    if (view === 'clientes') {
-                        if (clientesView) clientesView.style.display = 'block';
-                        if (gruposView) gruposView.style.display = 'none';
-                    } else {
-                        if (clientesView) clientesView.style.display = 'none';
-                        if (gruposView) gruposView.style.display = 'block';
+    // Adicionar event listeners aos botões de toggle
+    setTimeout(() => {
+        const toggleButtons = clientesList.querySelectorAll('.toggle-btn');
+        const clientesView = document.getElementById('clientes-view');
+        const gruposView = document.getElementById('grupos-view');
+        const resumoView = document.getElementById('resumo-view');
+        
+        // Inicialmente mostrar apenas clientes
+        if (gruposView) gruposView.style.display = 'none';
+        if (resumoView) resumoView.style.display = 'none';
+        
+        toggleButtons.forEach(btn => {
+            btn.addEventListener('click', function() {
+                // Remover active de todos
+                toggleButtons.forEach(b => b.classList.remove('active'));
+                // Adicionar active ao clicado
+                this.classList.add('active');
+                
+                const view = this.getAttribute('data-view');
+                
+                if (view === 'clientes') {
+                    if (clientesView) clientesView.style.display = 'block';
+                    if (gruposView) gruposView.style.display = 'none';
+                    if (resumoView) resumoView.style.display = 'none';
+                } else if (view === 'grupos') {
+                    if (clientesView) clientesView.style.display = 'none';
+                    if (gruposView) gruposView.style.display = 'block';
+                    if (resumoView) resumoView.style.display = 'none';
+                } else if (view === 'resumo') {
+                    if (clientesView) clientesView.style.display = 'none';
+                    if (gruposView) gruposView.style.display = 'none';
+                    if (resumoView) resumoView.style.display = 'block';
+                }
+            });
+        });
+        
+        // Adicionar scroll suave às colunas
+        const colunas = clientesList.querySelectorAll('.clientes-colaborador, .grupos-colaborador');
+        colunas.forEach(coluna => {
+            coluna.addEventListener('scroll', function() {
+                // Sincroniza o scroll das colunas correspondentes
+                const scrollTop = this.scrollTop;
+                const scrollLeft = this.scrollLeft;
+                
+                // Encontra a coluna correspondente do outro colaborador
+                const isClientesColuna = this.closest('.clientes-colaborador');
+                const isGruposColuna = this.closest('.grupos-colaborador');
+                
+                colunas.forEach(otherColuna => {
+                    if (otherColuna !== this) {
+                        const otherIsClientes = otherColuna.closest('.clientes-colaborador');
+                        const otherIsGrupos = otherColuna.closest('.grupos-colaborador');
+                        
+                        // Só sincroniza se for do mesmo tipo (clientes ou grupos)
+                        if ((isClientesColuna && otherIsClientes) || (isGruposColuna && otherIsGrupos)) {
+                            otherColuna.scrollTop = scrollTop;
+                            otherColuna.scrollLeft = scrollLeft;
+                        }
                     }
                 });
             });
-        }, 100);
-    }
+        });
+    }, 100);
 
     // Abre o sidebar
     sidebar.classList.add('visible');
     overlay.classList.add('visible');
+}
+
+/**
+ * Renderiza a view de clientes para um colaborador específico na comparação
+ */
+function renderClientesViewComparacaoColaborador(clientes, colaborador) {
+    if (clientes.length === 0) {
+        return `
+            <div class="cliente-item empty">
+                <div class="cliente-header">
+                    <div class="cliente-nome">Nenhum cliente encontrado</div>
+                </div>
+            </div>
+        `;
+    }
+
+    const clientesHTML = clientes.map(cliente => {
+        const faturamentoFormatado = new Intl.NumberFormat('pt-BR', {
+            style: 'currency',
+            currency: 'BRL',
+            minimumFractionDigits: 2
+        }).format(cliente.faturamento);
+
+        return `
+            <div class="cliente-item">
+                <div class="cliente-header">
+                    <div class="cliente-nome">${cliente.nome}</div>
+                    <div class="cliente-complexidade complexidade-${cliente.complexidade}">
+                        ${cliente.complexidade}
+                    </div>
+                </div>
+                <div class="cliente-details">
+                    <div class="cliente-detail">
+                        <span class="detail-label">Grupo</span>
+                        <span class="detail-value">${cliente.grupo}</span>
+                    </div>
+                    <div class="cliente-detail">
+                        <span class="detail-label">Competência</span>
+                        <span class="detail-value">${cliente.competencia}</span>
+                    </div>
+                    <div class="cliente-detail">
+                        <span class="detail-label">Faturamento</span>
+                        <span class="detail-value">${faturamentoFormatado}</span>
+                    </div>
+                </div>
+            </div>
+        `;
+    }).join('');
+
+    const totalClientes = clientes.length;
+    const totalFaturamento = clientes.reduce((sum, cliente) => sum + cliente.faturamento, 0);
+    const faturamentoTotalFormatado = new Intl.NumberFormat('pt-BR', {
+        style: 'currency',
+        currency: 'BRL',
+        minimumFractionDigits: 2
+    }).format(totalFaturamento);
+
+    const resumoHTML = `
+        <div class="cliente-item resumo-total">
+            <div class="cliente-header">
+                <div class="cliente-nome">RESUMO</div>
+            </div>
+            <div class="cliente-details">
+                <div class="cliente-detail">
+                    <span class="detail-label">Total Clientes</span>
+                    <span class="detail-value highlight">${totalClientes}</span>
+                </div>
+                <div class="cliente-detail">
+                    <span class="detail-label">Faturamento Total</span>
+                    <span class="detail-value highlight">${faturamentoTotalFormatado}</span>
+                </div>
+                <div class="cliente-detail">
+                    <span class="detail-label">Cliente Médio</span>
+                    <span class="detail-value">${totalClientes > 0 ? new Intl.NumberFormat('pt-BR', {
+                        style: 'currency',
+                        currency: 'BRL',
+                        minimumFractionDigits: 2
+                    }).format(totalFaturamento / totalClientes) : 'R$ 0,00'}</span>
+                </div>
+            </div>
+        </div>
+    `;
+
+    return `
+        <div class="clientes-colaborador">
+            ${resumoHTML}
+            ${clientesHTML}
+        </div>
+    `;
+}
+
+/**
+ * Renderiza a view de grupos para um colaborador específico na comparação
+ */
+function renderGruposViewComparacaoColaborador(clientes, colaborador) {
+    if (clientes.length === 0) {
+        return `
+            <div class="cliente-item empty">
+                <div class="cliente-header">
+                    <div class="cliente-nome">Nenhum grupo encontrado</div>
+                </div>
+            </div>
+        `;
+    }
+
+    // Calcular grupos
+    const gruposMap = new Map();
+    clientes.forEach(cliente => {
+        const grupo = cliente.grupo || 'Sem Grupo';
+        if (!gruposMap.has(grupo)) {
+            gruposMap.set(grupo, {
+                nome: grupo,
+                clientes: [],
+                complexidades: { 'A': 0, 'B': 0, 'C': 0, 'D': 0 },
+                faturamentoTotal: 0
+            });
+        }
+        
+        const grupoData = gruposMap.get(grupo);
+        grupoData.clientes.push(cliente);
+        if (grupoData.complexidades[cliente.complexidade] !== undefined) {
+            grupoData.complexidades[cliente.complexidade]++;
+        }
+        grupoData.faturamentoTotal += cliente.faturamento;
+    });
+
+    const grupos = Array.from(gruposMap.values());
+
+    const gruposHTML = grupos.map(grupo => {
+        const faturamentoFormatado = new Intl.NumberFormat('pt-BR', {
+            style: 'currency',
+            currency: 'BRL',
+            minimumFractionDigits: 2
+        }).format(grupo.faturamentoTotal);
+
+        return `
+            <div class="cliente-item grupo-item">
+                <div class="cliente-header">
+                    <div class="cliente-nome">${grupo.nome}</div>
+                    <div class="grupo-stats">
+                        <span class="complexidade-count complexidade-A">A: ${grupo.complexidades['A'] || 0}</span>
+                        <span class="complexidade-count complexidade-B">B: ${grupo.complexidades['B'] || 0}</span>
+                        <span class="complexidade-count complexidade-C">C: ${grupo.complexidades['C'] || 0}</span>
+                        <span class="complexidade-count complexidade-D">D: ${grupo.complexidades['D'] || 0}</span>
+                    </div>
+                </div>
+                <div class="cliente-details">
+                    <div class="cliente-detail">
+                        <span class="detail-label">Clientes</span>
+                        <span class="detail-value">${grupo.clientes.length}</span>
+                    </div>
+                    <div class="cliente-detail">
+                        <span class="detail-label">Faturamento</span>
+                        <span class="detail-value">${faturamentoFormatado}</span>
+                    </div>
+                </div>
+            </div>
+        `;
+    }).join('');
+
+    const totalGrupos = grupos.length;
+    const totalClientesGrupos = clientes.length;
+    const totalFaturamentoGrupos = clientes.reduce((sum, cliente) => sum + cliente.faturamento, 0);
+    
+    const resumoHTML = `
+        <div class="cliente-item resumo-total">
+            <div class="cliente-header">
+                <div class="cliente-nome">RESUMO GRUPOS</div>
+            </div>
+            <div class="cliente-details">
+                <div class="cliente-detail">
+                    <span class="detail-label">Total Grupos</span>
+                    <span class="detail-value highlight">${totalGrupos}</span>
+                </div>
+                <div class="cliente-detail">
+                    <span class="detail-label">Total Clientes</span>
+                    <span class="detail-value">${totalClientesGrupos}</span>
+                </div>
+                <div class="cliente-detail">
+                    <span class="detail-label">Faturamento Total</span>
+                    <span class="detail-value highlight">${new Intl.NumberFormat('pt-BR', {
+                        style: 'currency',
+                        currency: 'BRL',
+                        minimumFractionDigits: 2
+                    }).format(totalFaturamentoGrupos)}</span>
+                </div>
+            </div>
+        </div>
+    `;
+
+    return `
+        <div class="grupos-colaborador">
+            ${resumoHTML}
+            ${gruposHTML}
+        </div>
+    `;
+}
+
+/**
+ * Renderiza o resumo comparativo entre os dois colaboradores
+ */
+function renderResumoComparacao(colaborador1, clientes1, colaborador2, clientes2) {
+    const totalClientes1 = clientes1.length;
+    const totalFaturamento1 = clientes1.reduce((sum, c) => sum + c.faturamento, 0);
+    const mediaCliente1 = totalClientes1 > 0 ? totalFaturamento1 / totalClientes1 : 0;
+    
+    const totalClientes2 = clientes2.length;
+    const totalFaturamento2 = clientes2.reduce((sum, c) => sum + c.faturamento, 0);
+    const mediaCliente2 = totalClientes2 > 0 ? totalFaturamento2 / totalClientes2 : 0;
+    
+    // Calcular grupos únicos
+    const grupos1 = new Set(clientes1.map(c => c.grupo || 'Sem Grupo'));
+    const grupos2 = new Set(clientes2.map(c => c.grupo || 'Sem Grupo'));
+    
+    // Calcular complexidade
+    const complexidades1 = { 'A': 0, 'B': 0, 'C': 0, 'D': 0 };
+    const complexidades2 = { 'A': 0, 'B': 0, 'C': 0, 'D': 0 };
+    
+    clientes1.forEach(c => {
+        if (complexidades1[c.complexidade] !== undefined) {
+            complexidades1[c.complexidade]++;
+        }
+    });
+    
+    clientes2.forEach(c => {
+        if (complexidades2[c.complexidade] !== undefined) {
+            complexidades2[c.complexidade]++;
+        }
+    });
+    
+    // Determinar "vencedor" em cada categoria
+    const getVencedor = (valor1, valor2) => {
+        if (valor1 > valor2) return 'colaborador1';
+        if (valor2 > valor1) return 'colaborador2';
+        return 'empate';
+    };
+    
+    return `
+        <div class="resumo-comparativo">
+            <div class="resumo-header">
+                <h3>Resumo Comparativo</h3>
+                <p>Comparação entre ${colaborador1.NOME} e ${colaborador2.NOME}</p>
+            </div>
+            
+            <div class="comparacao-metricas">
+                <div class="metrica-item ${getVencedor(totalClientes1, totalClientes2) === 'colaborador1' ? 'vencedor' : ''}">
+                    <div class="metrica-titulo">Total de Clientes</div>
+                    <div class="metrica-valores">
+                        <span class="valor-col1">${totalClientes1}</span>
+                        <span class="vs">vs</span>
+                        <span class="valor-col2 ${getVencedor(totalClientes1, totalClientes2) === 'colaborador2' ? 'vencedor' : ''}">${totalClientes2}</span>
+                    </div>
+                </div>
+                
+                <div class="metrica-item ${getVencedor(totalFaturamento1, totalFaturamento2) === 'colaborador1' ? 'vencedor' : ''}">
+                    <div class="metrica-titulo">Faturamento Total</div>
+                    <div class="metrica-valores">
+                        <span class="valor-col1">${new Intl.NumberFormat('pt-BR', {
+                            style: 'currency',
+                            currency: 'BRL',
+                            minimumFractionDigits: 2
+                        }).format(totalFaturamento1)}</span>
+                        <span class="vs">vs</span>
+                        <span class="valor-col2 ${getVencedor(totalFaturamento1, totalFaturamento2) === 'colaborador2' ? 'vencedor' : ''}">${new Intl.NumberFormat('pt-BR', {
+                            style: 'currency',
+                            currency: 'BRL',
+                            minimumFractionDigits: 2
+                        }).format(totalFaturamento2)}</span>
+                    </div>
+                </div>
+                
+                <div class="metrica-item ${getVencedor(mediaCliente1, mediaCliente2) === 'colaborador1' ? 'vencedor' : ''}">
+                    <div class="metrica-titulo">Faturamento Médio por Cliente</div>
+                    <div class="metrica-valores">
+                        <span class="valor-col1">${new Intl.NumberFormat('pt-BR', {
+                            style: 'currency',
+                            currency: 'BRL',
+                            minimumFractionDigits: 2
+                        }).format(mediaCliente1)}</span>
+                        <span class="vs">vs</span>
+                        <span class="valor-col2 ${getVencedor(mediaCliente1, mediaCliente2) === 'colaborador2' ? 'vencedor' : ''}">${new Intl.NumberFormat('pt-BR', {
+                            style: 'currency',
+                            currency: 'BRL',
+                            minimumFractionDigits: 2
+                        }).format(mediaCliente2)}</span>
+                    </div>
+                </div>
+                
+                <div class="metrica-item ${getVencedor(grupos1.size, grupos2.size) === 'colaborador1' ? 'vencedor' : ''}">
+                    <div class="metrica-titulo">Grupos Distintos</div>
+                    <div class="metrica-valores">
+                        <span class="valor-col1">${grupos1.size}</span>
+                        <span class="vs">vs</span>
+                        <span class="valor-col2 ${getVencedor(grupos1.size, grupos2.size) === 'colaborador2' ? 'vencedor' : ''}">${grupos2.size}</span>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="complexidade-comparativa">
+                <h4>Distribuição de Complexidade</h4>
+                <div class="complexidade-bars">
+                    <div class="complexidade-bar-col">
+                        <div class="bar-label">${colaborador1.NOME}</div>
+                        <div class="bar-container">
+                            <div class="bar complexidade-A" style="height: ${(complexidades1['A'] / totalClientes1) * 100 || 0}%">
+                                <span class="bar-value">A: ${complexidades1['A']}</span>
+                            </div>
+                            <div class="bar complexidade-B" style="height: ${(complexidades1['B'] / totalClientes1) * 100 || 0}%">
+                                <span class="bar-value">B: ${complexidades1['B']}</span>
+                            </div>
+                            <div class="bar complexidade-C" style="height: ${(complexidades1['C'] / totalClientes1) * 100 || 0}%">
+                                <span class="bar-value">C: ${complexidades1['C']}</span>
+                            </div>
+                            <div class="bar complexidade-D" style="height: ${(complexidades1['D'] / totalClientes1) * 100 || 0}%">
+                                <span class="bar-value">D: ${complexidades1['D']}</span>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="complexidade-bar-col">
+                        <div class="bar-label">${colaborador2.NOME}</div>
+                        <div class="bar-container">
+                            <div class="bar complexidade-A" style="height: ${(complexidades2['A'] / totalClientes2) * 100 || 0}%">
+                                <span class="bar-value">A: ${complexidades2['A']}</span>
+                            </div>
+                            <div class="bar complexidade-B" style="height: ${(complexidades2['B'] / totalClientes2) * 100 || 0}%">
+                                <span class="bar-value">B: ${complexidades2['B']}</span>
+                            </div>
+                            <div class="bar complexidade-C" style="height: ${(complexidades2['C'] / totalClientes2) * 100 || 0}%">
+                                <span class="bar-value">C: ${complexidades2['C']}</span>
+                            </div>
+                            <div class="bar complexidade-D" style="height: ${(complexidades2['D'] / totalClientes2) * 100 || 0}%">
+                                <span class="bar-value">D: ${complexidades2['D']}</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    `;
 }
 
 /**
@@ -1084,6 +1583,7 @@ function getClientesDoColaboradorComFiltro(nomeColaborador, competenciaFiltro) {
     }).map(cliente => ({
         nome: cliente.Cliente || 'Cliente sem nome',
         grupo: cliente.Grupo || 'N/A',
+        segmento: cliente.Segmento || 'N/A',
         competencia: cliente.Competência || 'N/A',
         complexidade: cliente.Complexidade || 'N/A',
         faturamento: parseCurrency(cliente.Faturamento || 0)
@@ -1220,7 +1720,7 @@ function aggregateData() {
             STAT_2_VALOR: gruposDistintos,
             STAT_3_TITULO: 'Faturamento',
             STAT_3_VALOR: member.FATURAMENTO_TOTAL,
-            PROGRESSO_TITULO: 'Qualidade das entregas',
+            PROGRESSO_TITULO: 'Fechamentos no prazo',
             PROGRESSO_VALOR: progressPercentage // USA O VALOR DIRETO
         };
     });
@@ -1461,7 +1961,7 @@ function recalculateAggregations(filteredCollaborators) {
             STAT_2_VALOR: gruposDistintos,
             STAT_3_TITULO: 'Faturamento',
             STAT_3_VALOR: member.FATURAMENTO_TOTAL,
-            PROGRESSO_TITULO: 'Qualidade das entregas',
+            PROGRESSO_TITULO: 'Fechamentos no prazo',
             PROGRESSO_VALOR: progressoValor,
             PONTUACAO_TOTAL: pontuacaoTotal
         };
@@ -2083,7 +2583,7 @@ function renderModals(data) {
             rankEmoji = "🥉";
         }
 
-        const maxCount = Math.max(complexidadeCounts['A'], complexidadeCounts['B'], complexidadeCounts['C',complexidadeCounts['D']]);
+        const maxCount = Math.max(complexidadeCounts['A'], complexidadeCounts['B'], complexidadeCounts['C'],complexidadeCounts['D']);
         const barHeightA = maxCount > 0 ? (complexidadeCounts['A'] / maxCount) * 100 : (complexidadeCounts['A'] > 0 ? 20 : 0);
         const barHeightB = maxCount > 0 ? (complexidadeCounts['B'] / maxCount) * 100 : (complexidadeCounts['B'] > 0 ? 20 : 0);
         const barHeightC = maxCount > 0 ? (complexidadeCounts['C'] / maxCount) * 100 : (complexidadeCounts['C'] > 0 ? 20 : 0);
@@ -2352,6 +2852,10 @@ function renderClientesView(clientes) {
                         <span class="detail-label">Faturamento</span>
                         <span class="detail-value">${faturamentoFormatado}</span>
                     </div>
+                    <div class="cliente-detail">
+                        <span class="detail-label">Tributação</span>
+                        <span class="detail-value">${cliente.segmento}</span>
+                    </div>
                 </div>
             </div>
         `;
@@ -2379,6 +2883,14 @@ function renderClientesView(clientes) {
                 <div class="cliente-detail">
                     <span class="detail-label">Faturamento Total</span>
                     <span class="detail-value">${faturamentoTotalFormatado}</span>
+                </div>
+                <div class="cliente-detail">
+                    <span class="detail-label">Cliente Médio</span>
+                    <span class="detail-value">${totalClientes > 0 ? new Intl.NumberFormat('pt-BR', {
+                        style: 'currency',
+                        currency: 'BRL',
+                        minimumFractionDigits: 2
+                    }).format(totalFaturamento / totalClientes) : 'R$ 0,00'}</span>
                 </div>
             </div>
         </div>
@@ -2644,6 +3156,7 @@ function getClientesDoColaborador(nomeColaborador) {
     }).map(cliente => ({
         nome: cliente.Cliente || 'Cliente sem nome',
         grupo: cliente.Grupo || 'N/A',
+        segmento: cliente.Segmento || 'N/A',
         competencia: cliente.Competência || 'N/A',
         complexidade: cliente.Complexidade || 'N/A',
         faturamento: parseCurrency(cliente.Faturamento || 0)
@@ -2915,7 +3428,7 @@ function renderizarRanking() {
                         </div>
                         
                         <div class="stat-item-ranking">
-                            <div class="stat-title-ranking">Progresso</div>
+                            <div class="stat-title-ranking">Fechamentos no prazo</div>
                             <!-- Círculo de progresso com pontuação -->
                             <div class="ranking-progress">
                                 <div class="ranking-progress-circle" 
