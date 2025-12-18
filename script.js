@@ -1083,6 +1083,10 @@ function renderClientesViewComparacaoColaborador(clientes, colaborador) {
                         <span class="detail-label">Faturamento</span>
                         <span class="detail-value">${faturamentoFormatado}</span>
                     </div>
+                    <div class="cliente-detail">
+                        <span class="detail-label">Tributação</span>
+                        <span class="detail-value">${cliente.segmento}</span>
+                    </div>
                 </div>
             </div>
         `;
