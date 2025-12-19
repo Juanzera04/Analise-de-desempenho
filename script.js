@@ -751,9 +751,6 @@ function calcularDadosFiltrados(member, competenciaFiltro) {
     return memberFiltrado;
 }
 
-/**
- * Abre o sidebar de clientes na comparação
- */
 function abrirClientesSidebarComparacao(memberId, timeNum) {
     const sidebar = document.getElementById('clientes-sidebar');
     const overlay = document.getElementById('sidebar-overlay');
@@ -761,285 +758,159 @@ function abrirClientesSidebarComparacao(memberId, timeNum) {
 
     if (!sidebar || !overlay || !clientesList) return;
 
-    // Verifica se ambos os times têm colaboradores selecionados
-    if (!time1Colaborador || !time2Colaborador) {
-        // Se não tiver ambos, mostra apenas o colaborador clicado (comportamento original)
+    const isComparacao = time1Colaborador && time2Colaborador;
+
+    // =====================================================
+    // FUNÇÃO AUXILIAR – CONFIGURA TOGGLE (3 VIEWS)
+    // =====================================================
+    function configurarToggle(container) {
+        const views = {
+            clientes: container.querySelector('#clientes-view'),
+            grupos: container.querySelector('#grupos-view'),
+            tributacao: container.querySelector('#tributacao-view')
+        };
+
+        const buttons = container.querySelectorAll('.toggle-btn');
+
+        buttons.forEach(btn => {
+            btn.addEventListener('click', () => {
+                buttons.forEach(b => b.classList.remove('active'));
+                btn.classList.add('active');
+
+                Object.values(views).forEach(v => {
+                    if (v) v.style.display = 'none';
+                });
+
+                const view = btn.dataset.view;
+                if (views[view]) {
+                    views[view].style.display = 'block';
+                }
+            });
+        });
+    }
+
+    // =====================================================
+    // MODO SIMPLES (APENAS 1 COLABORADOR)
+    // =====================================================
+    if (!isComparacao) {
         const member = teamData.find(m => m.ID === memberId);
         if (!member) return;
 
-        const filtroCompetencia = document.getElementById(`filtro-competencia-${timeNum}`).value;
+        const filtroCompetencia = document.getElementById(`filtro-competencia-${timeNum}`)?.value || '';
         const clientes = getClientesDoColaboradorComFiltro(member.NOME, filtroCompetencia);
-        
-        // Atualiza o título do sidebar com informação do filtro
+
+        // Título
         const titleElement = sidebar.querySelector('.clientes-sidebar-title');
         if (titleElement) {
-            let titleText = `${member.NOME}`;
-            if (filtroCompetencia) {
-                titleText += ` - ${filtroCompetencia}`;
-            }
-            titleElement.textContent = titleText;
+            titleElement.textContent = filtroCompetencia
+                ? `${member.NOME} - ${filtroCompetencia}`
+                : member.NOME;
         }
 
-        // Renderiza a lista de clientes
-        if (clientes.length === 0) {
-            let mensagem = 'Nenhum cliente encontrado para este colaborador';
-            if (filtroCompetencia) {
-                mensagem += ` com a competência "${filtroCompetencia}"`;
-            }
-            clientesList.innerHTML = `
-                <div class="clientes-main-content">
-                    <div class="clientes-toggle-container">
-                        <div class="clientes-toggle-buttons">
-                            <button class="toggle-btn active" data-view="clientes">Clientes</button>
-                            <button class="toggle-btn" data-view="grupos">Grupos</button>
-                        </div>
-                    </div>
-                    <div class="clientes-content">
-                        <div id="clientes-view" class="clientes-view">
-                            <div class="cliente-item" style="text-align: center; color: var(--dark-secondary-text); padding: 30px;">
-                                ${mensagem}
-                            </div>
-                        </div>
-                        <div id="grupos-view" class="grupos-view" style="display: none;"></div>
+        const clientesHTML = renderClientesViewComparacao(clientes);
+        const gruposHTML = renderGruposViewComparacaoColaborador(clientes, member);
+        const tributacaoHTML = renderTributacaoViewSimples(clientes);
+
+        clientesList.innerHTML = `
+            <div class="clientes-main-content">
+                <div class="clientes-toggle-container">
+                    <div class="clientes-toggle-buttons">
+                        <button class="toggle-btn active" data-view="clientes">Clientes</button>
+                        <button class="toggle-btn" data-view="grupos">Grupos</button>
+                        <button class="toggle-btn" data-view="tributacao">Tributação</button>
                     </div>
                 </div>
-            `;
-        } else {
-            // Calcular grupos para a view de grupos
-            const gruposMap = new Map();
-            clientes.forEach(cliente => {
-                const grupo = cliente.grupo || 'Sem Grupo';
-                if (!gruposMap.has(grupo)) {
-                    gruposMap.set(grupo, {
-                        nome: grupo,
-                        clientes: [],
-                        complexidades: { 'A': 0, 'B': 0, 'C': 0, 'D': 0 },
-                        faturamentoTotal: 0
-                    });
-                }
-                
-                const grupoData = gruposMap.get(grupo);
-                grupoData.clientes.push(cliente);
-                if (grupoData.complexidades[cliente.complexidade] !== undefined) {
-                    grupoData.complexidades[cliente.complexidade]++;
-                }
-                grupoData.faturamentoTotal += cliente.faturamento;
-            });
-
-            const grupos = Array.from(gruposMap.values());
-
-            // Renderizar views
-            const clientesViewHTML = renderClientesViewComparacao(clientes);
-            const gruposViewHTML = renderGruposViewComparacao(grupos);
-
-            const sidebarContent = `
-                <div class="clientes-main-content">
-                    <div class="clientes-toggle-container">
-                        <div class="clientes-toggle-buttons">
-                            <button class="toggle-btn active" data-view="clientes">Clientes</button>
-                            <button class="toggle-btn" data-view="grupos">Grupos</button>
-                        </div>
-                    </div>
-                    <div class="clientes-content">
-                        ${clientesViewHTML}
-                        ${gruposViewHTML}
-                    </div>
+                <div class="clientes-content">
+                    <div id="clientes-view">${clientesHTML}</div>
+                    <div id="grupos-view" style="display:none;">${gruposHTML}</div>
+                    <div id="tributacao-view" style="display:none;">${tributacaoHTML}</div>
                 </div>
-            `;
+            </div>
+        `;
 
-            clientesList.innerHTML = sidebarContent;
+        configurarToggle(clientesList);
 
-            // Adicionar event listeners aos botões de toggle
-            setTimeout(() => {
-                const toggleButtons = clientesList.querySelectorAll('.toggle-btn');
-                const clientesView = document.getElementById('clientes-view');
-                const gruposView = document.getElementById('grupos-view');
-                
-                // Inicialmente mostrar apenas clientes
-                if (gruposView) gruposView.style.display = 'none';
-                
-                toggleButtons.forEach(btn => {
-                    btn.addEventListener('click', function() {
-                        // Remover active de todos
-                        toggleButtons.forEach(b => b.classList.remove('active'));
-                        // Adicionar active ao clicado
-                        this.classList.add('active');
-                        
-                        const view = this.getAttribute('data-view');
-                        
-                        if (view === 'clientes') {
-                            if (clientesView) clientesView.style.display = 'block';
-                            if (gruposView) gruposView.style.display = 'none';
-                        } else {
-                            if (clientesView) clientesView.style.display = 'none';
-                            if (gruposView) gruposView.style.display = 'block';
-                        }
-                    });
-                });
-            }, 100);
-        }
-
-        // Abre o sidebar
         sidebar.classList.add('visible');
         overlay.classList.add('visible');
         return;
     }
 
-    // ==============================================
-    // COMPARAÇÃO COM AMBOS OS COLABORADORES
-    // ==============================================
-    
-    // Obtém dados de AMBOS os colaboradores
+    // =====================================================
+    // MODO COMPARAÇÃO (2 COLABORADORES)
+    // =====================================================
     const colaborador1 = time1Colaborador;
     const colaborador2 = time2Colaborador;
-    
-    const filtroCompetencia1 = document.getElementById('filtro-competencia-1').value;
-    const filtroCompetencia2 = document.getElementById('filtro-competencia-2').value;
-    
+
+    const filtroCompetencia1 = document.getElementById('filtro-competencia-1')?.value || '';
+    const filtroCompetencia2 = document.getElementById('filtro-competencia-2')?.value || '';
+
     const clientes1 = getClientesDoColaboradorComFiltro(colaborador1.NOME, filtroCompetencia1);
     const clientes2 = getClientesDoColaboradorComFiltro(colaborador2.NOME, filtroCompetencia2);
 
-    // Atualiza o título do sidebar
+    // Título
     const titleElement = sidebar.querySelector('.clientes-sidebar-title');
     if (titleElement) {
         titleElement.textContent = `Comparação: ${colaborador1.NOME} vs ${colaborador2.NOME}`;
     }
 
-    // Renderiza a visão comparativa com ambos os colaboradores
-    const sidebarContent = `
+    clientesList.innerHTML = `
         <div class="clientes-main-content comparativo">
             <div class="clientes-toggle-container">
                 <div class="clientes-toggle-buttons">
                     <button class="toggle-btn active" data-view="clientes">Clientes</button>
                     <button class="toggle-btn" data-view="grupos">Grupos</button>
+                    <button class="toggle-btn" data-view="tributacao">Tributação</button>
                 </div>
             </div>
+
             <div class="clientes-content comparativo">
-                <!-- View de Clientes (lado a lado) -->
-                <div id="clientes-view" class="clientes-view comparativo" style="display: block;">
+
+                <!-- CLIENTES -->
+                <div id="clientes-view" class="comparativo">
                     <div class="comparacao-container">
-                        <!-- Colaborador 1 (Esquerda) -->
                         <div class="colaborador-coluna">
-                            <div class="colaborador-header" style="background: ${roleStripColorMap[colaborador1.CARGO] || roleStripColorMap['Outros']}">
-                                <h3>${colaborador1.NOME}</h3>
-                                ${filtroCompetencia1 ? `<div class="filtro-info">Filtro: ${filtroCompetencia1}</div>` : ''}
-                            </div>
-                            <div class="clientes-colaborador">
-                                ${renderClientesViewComparacaoColaborador(clientes1, colaborador1)}
-                            </div>
+                            <h3>${colaborador1.NOME}</h3>
+                            ${renderClientesViewComparacaoColaborador(clientes1, colaborador1)}
                         </div>
-                        
-                        <!-- Colaborador 2 (Direita) -->
                         <div class="colaborador-coluna">
-                            <div class="colaborador-header" style="background: ${roleStripColorMap[colaborador2.CARGO] || roleStripColorMap['Outros']}">
-                                <h3>${colaborador2.NOME}</h3>
-                                ${filtroCompetencia2 ? `<div class="filtro-info">Filtro: ${filtroCompetencia2}</div>` : ''}
-                            </div>
-                            <div class="clientes-colaborador">
-                                ${renderClientesViewComparacaoColaborador(clientes2, colaborador2)}
-                            </div>
+                            <h3>${colaborador2.NOME}</h3>
+                            ${renderClientesViewComparacaoColaborador(clientes2, colaborador2)}
                         </div>
                     </div>
                 </div>
-                
-                <!-- View de Grupos (lado a lado) -->
-                <div id="grupos-view" class="grupos-view comparativo" style="display: none;">
+
+                <!-- GRUPOS -->
+                <div id="grupos-view" class="comparativo" style="display:none;">
                     <div class="comparacao-container">
-                        <!-- Colaborador 1 -->
                         <div class="colaborador-coluna">
-                            <div class="colaborador-header" style="background: ${roleStripColorMap[colaborador1.CARGO] || roleStripColorMap['Outros']}">
-                                <h3>${colaborador1.NOME} - Grupos</h3>
-                            </div>
-                            <div class="grupos-colaborador">
-                                ${renderGruposViewComparacaoColaborador(clientes1, colaborador1)}
-                            </div>
+                            <h3>${colaborador1.NOME} - Grupos</h3>
+                            ${renderGruposViewComparacaoColaborador(clientes1, colaborador1)}
                         </div>
-                        
-                        <!-- Colaborador 2 -->
                         <div class="colaborador-coluna">
-                            <div class="colaborador-header" style="background: ${roleStripColorMap[colaborador2.CARGO] || roleStripColorMap['Outros']}">
-                                <h3>${colaborador2.NOME} - Grupos</h3>
-                            </div>
-                            <div class="grupos-colaborador">
-                                ${renderGruposViewComparacaoColaborador(clientes2, colaborador2)}
-                            </div>
+                            <h3>${colaborador2.NOME} - Grupos</h3>
+                            ${renderGruposViewComparacaoColaborador(clientes2, colaborador2)}
                         </div>
                     </div>
                 </div>
+
+                <!-- TRIBUTAÇÃO -->
+                <div id="tributacao-view" class="comparativo" style="display:none;">
+                    ${renderTributacaoViewComparacao(
+                        colaborador1, clientes1,
+                        colaborador2, clientes2
+                    )}
+                </div>
+
             </div>
         </div>
     `;
 
-    clientesList.innerHTML = sidebarContent;
+    configurarToggle(clientesList);
 
-    // Adicionar event listeners aos botões de toggle
-    setTimeout(() => {
-        const toggleButtons = clientesList.querySelectorAll('.toggle-btn');
-        const clientesView = document.getElementById('clientes-view');
-        const gruposView = document.getElementById('grupos-view');
-        const resumoView = document.getElementById('resumo-view');
-        
-        // Inicialmente mostrar apenas clientes
-        if (gruposView) gruposView.style.display = 'none';
-        if (resumoView) resumoView.style.display = 'none';
-        
-        toggleButtons.forEach(btn => {
-            btn.addEventListener('click', function() {
-                // Remover active de todos
-                toggleButtons.forEach(b => b.classList.remove('active'));
-                // Adicionar active ao clicado
-                this.classList.add('active');
-                
-                const view = this.getAttribute('data-view');
-                
-                if (view === 'clientes') {
-                    if (clientesView) clientesView.style.display = 'block';
-                    if (gruposView) gruposView.style.display = 'none';
-                    if (resumoView) resumoView.style.display = 'none';
-                } else if (view === 'grupos') {
-                    if (clientesView) clientesView.style.display = 'none';
-                    if (gruposView) gruposView.style.display = 'block';
-                    if (resumoView) resumoView.style.display = 'none';
-                } else if (view === 'resumo') {
-                    if (clientesView) clientesView.style.display = 'none';
-                    if (gruposView) gruposView.style.display = 'none';
-                    if (resumoView) resumoView.style.display = 'block';
-                }
-            });
-        });
-        
-        // Adicionar scroll suave às colunas
-        const colunas = clientesList.querySelectorAll('.clientes-colaborador, .grupos-colaborador');
-        colunas.forEach(coluna => {
-            coluna.addEventListener('scroll', function() {
-                // Sincroniza o scroll das colunas correspondentes
-                const scrollTop = this.scrollTop;
-                const scrollLeft = this.scrollLeft;
-                
-                // Encontra a coluna correspondente do outro colaborador
-                const isClientesColuna = this.closest('.clientes-colaborador');
-                const isGruposColuna = this.closest('.grupos-colaborador');
-                
-                colunas.forEach(otherColuna => {
-                    if (otherColuna !== this) {
-                        const otherIsClientes = otherColuna.closest('.clientes-colaborador');
-                        const otherIsGrupos = otherColuna.closest('.grupos-colaborador');
-                        
-                        // Só sincroniza se for do mesmo tipo (clientes ou grupos)
-                        if ((isClientesColuna && otherIsClientes) || (isGruposColuna && otherIsGrupos)) {
-                            otherColuna.scrollTop = scrollTop;
-                            otherColuna.scrollLeft = scrollLeft;
-                        }
-                    }
-                });
-            });
-        });
-    }, 100);
-
-    // Abre o sidebar
     sidebar.classList.add('visible');
     overlay.classList.add('visible');
 }
+
 
 /**
  * Renderiza a view de clientes para um colaborador específico na comparação
@@ -1569,6 +1440,139 @@ function renderGruposViewComparacao(grupos) {
         </div>
     `;
 }
+
+function renderTributacaoViewComparacaoColaborador(clientes, colaborador) {
+    if (clientes.length === 0) {
+        return `
+            <div class="cliente-item empty">
+                <div class="cliente-header">
+                    <div class="cliente-nome">Nenhuma tributação encontrada</div>
+                </div>
+            </div>
+        `;
+    }
+
+    // Agrupar por tributação
+    const tributacaoMap = new Map();
+
+    clientes.forEach(cliente => {
+        const trib = cliente.tributação || 'Não Informada';
+
+        if (!tributacaoMap.has(trib)) {
+            tributacaoMap.set(trib, {
+                nome: trib,
+                totalClientes: 0,
+                faturamentoTotal: 0,
+                complexidades: { A: 0, B: 0, C: 0, D: 0 }
+            });
+        }
+
+        const data = tributacaoMap.get(trib);
+        data.totalClientes++;
+        data.faturamentoTotal += cliente.faturamento;
+
+        if (data.complexidades[cliente.complexidade] !== undefined) {
+            data.complexidades[cliente.complexidade]++;
+        }
+    });
+
+    const tributacoes = Array.from(tributacaoMap.values());
+
+    const tributacaoHTML = tributacoes.map(trib => `
+        <div class="cliente-item grupo-item">
+            <div class="cliente-header">
+                <div class="cliente-nome">${trib.nome}</div>
+                <div class="grupo-stats">
+                    <span class="complexidade-count complexidade-A">A: ${trib.complexidades.A}</span>
+                    <span class="complexidade-count complexidade-B">B: ${trib.complexidades.B}</span>
+                    <span class="complexidade-count complexidade-C">C: ${trib.complexidades.C}</span>
+                    <span class="complexidade-count complexidade-D">D: ${trib.complexidades.D}</span>
+                </div>
+            </div>
+            <div class="cliente-details">
+                <div class="cliente-detail">
+                    <span class="detail-label">Clientes</span>
+                    <span class="detail-value">${trib.totalClientes}</span>
+                </div>
+                <div class="cliente-detail">
+                    <span class="detail-label">Faturamento</span>
+                    <span class="detail-value">
+                        ${new Intl.NumberFormat('pt-BR', {
+                            style: 'currency',
+                            currency: 'BRL'
+                        }).format(trib.faturamentoTotal)}
+                    </span>
+                </div>
+            </div>
+        </div>
+    `).join('');
+
+    const totalClientes = clientes.length;
+    const totalFaturamento = clientes.reduce((s, c) => s + c.faturamento, 0);
+
+    const resumoHTML = `
+        <div class="cliente-item resumo-total">
+            <div class="cliente-header">
+                <div class="cliente-nome">RESUMO TRIBUTAÇÃO</div>
+            </div>
+            <div class="cliente-details">
+                <div class="cliente-detail">
+                    <span class="detail-label">Tipos</span>
+                    <span class="detail-value highlight">${tributacoes.length}</span>
+                </div>
+                <div class="cliente-detail">
+                    <span class="detail-label">Clientes</span>
+                    <span class="detail-value">${totalClientes}</span>
+                </div>
+                <div class="cliente-detail">
+                    <span class="detail-label">Faturamento</span>
+                    <span class="detail-value highlight">
+                        ${new Intl.NumberFormat('pt-BR', {
+                            style: 'currency',
+                            currency: 'BRL'
+                        }).format(totalFaturamento)}
+                    </span>
+                </div>
+            </div>
+        </div>
+    `;
+
+    return `
+        <div class="grupos-colaborador">
+            ${resumoHTML}
+            ${tributacaoHTML}
+        </div>
+    `;
+}
+
+function renderTributacaoViewComparacao(colaborador1, clientes1, colaborador2, clientes2) {
+    return `
+        <div id="tributacao-view" class="grupos-view comparativo" style="display: none;">
+            <div class="comparacao-container">
+                
+                <div class="colaborador-coluna">
+                    <div class="colaborador-header" style="background: ${roleStripColorMap[colaborador1.CARGO] || roleStripColorMap['Outros']}">
+                        <h3>${colaborador1.NOME} - Tributação</h3>
+                    </div>
+                    <div class="grupos-colaborador">
+                        ${renderTributacaoViewComparacaoColaborador(clientes1, colaborador1)}
+                    </div>
+                </div>
+
+                <div class="colaborador-coluna">
+                    <div class="colaborador-header" style="background: ${roleStripColorMap[colaborador2.CARGO] || roleStripColorMap['Outros']}">
+                        <h3>${colaborador2.NOME} - Tributação</h3>
+                    </div>
+                    <div class="grupos-colaborador">
+                        ${renderTributacaoViewComparacaoColaborador(clientes2, colaborador2)}
+                    </div>
+                </div>
+
+            </div>
+        </div>
+    `;
+}
+
 
 /**
  * Obtém os clientes de um colaborador com filtro de competência
@@ -2748,6 +2752,34 @@ function abrirClientesSidebar(memberId) {
 
     const grupos = Array.from(gruposMap.values());
 
+    // AGRUPAR POR TRIBUTAÇÃO
+    const tributacaoMap = new Map();
+
+    clientes.forEach(cliente => {
+        const tributacao = cliente.tributação || 'Não Informada';
+
+        if (!tributacaoMap.has(tributacao)) {
+            tributacaoMap.set(tributacao, {
+                nome: tributacao,
+                clientes: [],
+                complexidades: { A: 0, B: 0, C: 0, D: 0 },
+                faturamentoTotal: 0
+            });
+        }
+
+        const tribData = tributacaoMap.get(tributacao);
+        tribData.clientes.push(cliente);
+
+        if (tribData.complexidades[cliente.complexidade] !== undefined) {
+            tribData.complexidades[cliente.complexidade]++;
+        }
+
+        tribData.faturamentoTotal += cliente.faturamento;
+    });
+
+    const tributacoes = Array.from(tributacaoMap.values());
+    const tributacaoViewHTML = renderTributacaoView(tributacoes);
+
     // Atualiza o título do sidebar
     const titleElement = sidebar.querySelector('.clientes-sidebar-title');
     if (titleElement) {
@@ -2769,11 +2801,13 @@ function abrirClientesSidebar(memberId) {
                 <div class="clientes-toggle-buttons">
                     <button class="toggle-btn active" data-view="clientes">Clientes</button>
                     <button class="toggle-btn" data-view="grupos">Grupos</button>
+                    <button class="toggle-btn" data-view="tributacao">Tributação</button>
                 </div>
             </div>
             <div class="clientes-content">
                 ${clientesViewHTML}
                 ${gruposViewHTML}
+                ${tributacaoViewHTML}
             </div>
         </div>
     `;
@@ -2785,9 +2819,12 @@ function abrirClientesSidebar(memberId) {
         const toggleButtons = clientesList.querySelectorAll('.toggle-btn');
         const clientesView = document.getElementById('clientes-view');
         const gruposView = document.getElementById('grupos-view');
+        const tributacaoView = document.getElementById('tributacao-view');
         
+
         // Inicialmente mostrar apenas clientes
         if (gruposView) gruposView.style.display = 'none';
+        if (tributacaoView) tributacaoView.style.display = 'none';
         
         toggleButtons.forEach(btn => {
             btn.addEventListener('click', function() {
@@ -2801,10 +2838,21 @@ function abrirClientesSidebar(memberId) {
                 if (view === 'clientes') {
                     if (clientesView) clientesView.style.display = 'block';
                     if (gruposView) gruposView.style.display = 'none';
-                } else {
+                    if (tributacaoView) tributacaoView.style.display = 'none';
+                }
+
+                if (view === 'grupos') {
                     if (clientesView) clientesView.style.display = 'none';
                     if (gruposView) gruposView.style.display = 'block';
+                    if (tributacaoView) tributacaoView.style.display = 'none';
                 }
+
+                if (view === 'tributacao') {
+                    if (clientesView) clientesView.style.display = 'none';
+                    if (gruposView) gruposView.style.display = 'none';
+                    if (tributacaoView) tributacaoView.style.display = 'block';
+                }
+
             });
         });
     }, 100);
@@ -3010,6 +3058,115 @@ function renderGruposView(grupos) {
         </div>
     `;
 }
+
+/**
+ * Renderiza a view de tributação
+ */
+function renderTributacaoView(tributacoes) {
+    if (tributacoes.length === 0) {
+        return `
+            <div id="tributacao-view" class="grupos-view" style="display: none;">
+                <div class="cliente-item" style="text-align: center; color: var(--dark-secondary-text); padding: 30px;">
+                    Nenhuma tributação encontrada para este colaborador
+                </div>
+            </div>
+        `;
+    }
+
+    const tributacaoHTML = tributacoes.map(tributacao => {
+        const faturamentoFormatado = new Intl.NumberFormat('pt-BR', {
+            style: 'currency',
+            currency: 'BRL',
+            minimumFractionDigits: 2
+        }).format(tributacao.faturamentoTotal);
+
+        return `
+            <div class="cliente-item grupo-item">
+                <div class="cliente-header">
+                    <div class="cliente-nome">${tributacao.nome}</div>
+                    <div class="grupo-stats">
+                        <span class="complexidade-count complexidade-A">A: ${tributacao.complexidades['A'] || 0}</span>
+                        <span class="complexidade-count complexidade-B">B: ${tributacao.complexidades['B'] || 0}</span>
+                        <span class="complexidade-count complexidade-C">C: ${tributacao.complexidades['C'] || 0}</span>
+                        <span class="complexidade-count complexidade-D">D: ${tributacao.complexidades['D'] || 0}</span>
+                    </div>
+                </div>
+
+                <div class="cliente-details">
+                    <div class="cliente-detail">
+                        <span class="detail-label">Total de Clientes</span>
+                        <span class="detail-value">${tributacao.clientes.length}</span>
+                    </div>
+                    <div class="cliente-detail">
+                        <span class="detail-label">Faturamento Total</span>
+                        <span class="detail-value">${faturamentoFormatado}</span>
+                    </div>
+                </div>
+
+                <div class="grupo-clientes-list">
+                    ${tributacao.clientes.map(cliente => {
+                        const faturamentoCliente = new Intl.NumberFormat('pt-BR', {
+                            style: 'currency',
+                            currency: 'BRL',
+                            minimumFractionDigits: 2
+                        }).format(cliente.faturamento);
+
+                        return `
+                            <div class="cliente-subitem">
+                                <span class="cliente-subnome">${cliente.nome}</span>
+                                <span class="cliente-subcomplexidade complexidade-${cliente.complexidade}">
+                                    ${cliente.complexidade}
+                                </span>
+                                <span class="cliente-subfaturamento">${faturamentoCliente}</span>
+                            </div>
+                        `;
+                    }).join('')}
+                </div>
+            </div>
+        `;
+    }).join('');
+
+    // RESUMO GERAL
+    const totalTributacoes = tributacoes.length;
+    const totalClientes = tributacoes.reduce((sum, t) => sum + t.clientes.length, 0);
+    const totalFaturamento = tributacoes.reduce((sum, t) => sum + t.faturamentoTotal, 0);
+
+    const faturamentoTotalFormatado = new Intl.NumberFormat('pt-BR', {
+        style: 'currency',
+        currency: 'BRL',
+        minimumFractionDigits: 2
+    }).format(totalFaturamento);
+
+    const resumoHTML = `
+        <div class="cliente-item resumo-total">
+            <div class="cliente-header">
+                <div class="cliente-nome">RESUMO - TRIBUTAÇÃO</div>
+            </div>
+            <div class="cliente-details">
+                <div class="cliente-detail">
+                    <span class="detail-label">Tipos de Tributação</span>
+                    <span class="detail-value">${totalTributacoes}</span>
+                </div>
+                <div class="cliente-detail">
+                    <span class="detail-label">Total de Clientes</span>
+                    <span class="detail-value">${totalClientes}</span>
+                </div>
+                <div class="cliente-detail">
+                    <span class="detail-label">Faturamento Total</span>
+                    <span class="detail-value">${faturamentoTotalFormatado}</span>
+                </div>
+            </div>
+        </div>
+    `;
+
+    return `
+        <div id="tributacao-view" class="grupos-view" style="display: none;">
+            ${resumoHTML}
+            ${tributacaoHTML}
+        </div>
+    `;
+}
+
 /**
  * Fecha o sidebar de clientes
  */
