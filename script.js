@@ -866,7 +866,7 @@ function abrirClientesSidebarComparacao(memberId, timeNum) {
             <div class="clientes-content comparativo">
 
                 <!-- CLIENTES -->
-                <div id="clientes-view" class="comparativo">
+                <div id="clientes-view" class="clientes-view comparativo">
                     <div class="comparacao-container">
                         <div class="colaborador-coluna">
                             <h3>${colaborador1.NOME}</h3>
@@ -880,7 +880,7 @@ function abrirClientesSidebarComparacao(memberId, timeNum) {
                 </div>
 
                 <!-- GRUPOS -->
-                <div id="grupos-view" class="comparativo" style="display:none;">
+                <div id="grupos-view" class="grupos-view comparativo" style="display:none;">
                     <div class="comparacao-container">
                         <div class="colaborador-coluna">
                             <h3>${colaborador1.NOME} - Grupos</h3>
@@ -895,12 +895,17 @@ function abrirClientesSidebarComparacao(memberId, timeNum) {
 
                 <!-- TRIBUTAÇÃO -->
                 <div id="tributacao-view" class="comparativo" style="display:none;">
-                    ${renderTributacaoViewComparacao(
-                        colaborador1, clientes1,
-                        colaborador2, clientes2
-                    )}
+                    <div class="comparacao-container">
+                        <div class="colaborador-coluna">
+                            <h3>${colaborador1.NOME} - Tributação</h3>
+                            ${renderTributacaoViewComparacaoColaborador(clientes1, colaborador1)}
+                        </div>
+                        <div class="colaborador-coluna">
+                            <h3>${colaborador2.NOME} - Tributação</h3>
+                            ${renderTributacaoViewComparacaoColaborador(clientes2, colaborador2)}
+                        </div>
+                    </div>
                 </div>
-
             </div>
         </div>
     `;
@@ -911,6 +916,223 @@ function abrirClientesSidebarComparacao(memberId, timeNum) {
     overlay.classList.add('visible');
 }
 
+function renderTributacaoViewComparacao(clientes) {
+
+    if (!clientes || clientes.length === 0) {
+        return `
+            <div id="tributacao-view" class="tributacao-view" style="display:none;">
+                <div class="cliente-item" style="text-align:center; padding:30px;">
+                    Nenhum dado de tributação encontrado
+                </div>
+            </div>
+        `;
+    }
+
+    // 🔹 Agrupar por tributação
+    const map = new Map();
+
+    clientes.forEach(cliente => {
+        const trib = cliente.tributação || 'Não Informada';
+
+        if (!map.has(trib)) {
+            map.set(trib, {
+                nome: trib,
+                clientes: 0,
+                faturamento: 0,
+                complexidades: { A: 0, B: 0, C: 0, D: 0 }
+            });
+        }
+
+        const item = map.get(trib);
+        item.clientes++;
+        item.faturamento += cliente.faturamento || 0;
+
+        if (item.complexidades[cliente.complexidade] !== undefined) {
+            item.complexidades[cliente.complexidade]++;
+        }
+    });
+
+    const tributacoes = Array.from(map.values());
+
+    // 🔹 Resumo (igual grupos)
+    const totalClientes = clientes.length;
+    const totalFaturamento = clientes.reduce((s, c) => s + (c.faturamento || 0), 0);
+
+    const resumoHTML = `
+        <div class="cliente-item resumo-total">
+            <div class="cliente-header">
+                <div class="cliente-nome">RESUMO - TRIBUTAÇÃO</div>
+            </div>
+            <div class="cliente-details">
+                <div class="cliente-detail">
+                    <span class="detail-label">Tipos</span>
+                    <span class="detail-value">${tributacoes.length}</span>
+                </div>
+                <div class="cliente-detail">
+                    <span class="detail-label">Clientes</span>
+                    <span class="detail-value">${totalClientes}</span>
+                </div>
+                <div class="cliente-detail">
+                    <span class="detail-label">Faturamento</span>
+                    <span class="detail-value">
+                        ${new Intl.NumberFormat('pt-BR', {
+                            style: 'currency',
+                            currency: 'BRL'
+                        }).format(totalFaturamento)}
+                    </span>
+                </div>
+            </div>
+        </div>
+    `;
+
+    // 🔹 Lista de tributações (espelho dos grupos)
+    const itensHTML = tributacoes.map(t => `
+        <div class="cliente-item grupo-item">
+            <div class="cliente-header">
+                <div class="cliente-nome">${t.nome}</div>
+                <div class="grupo-stats">
+                    <span class="complexidade-count complexidade-A">A: ${t.complexidades.A}</span>
+                    <span class="complexidade-count complexidade-B">B: ${t.complexidades.B}</span>
+                    <span class="complexidade-count complexidade-C">C: ${t.complexidades.C}</span>
+                    <span class="complexidade-count complexidade-D">D: ${t.complexidades.D}</span>
+                </div>
+            </div>
+            <div class="cliente-details">
+                <div class="cliente-detail">
+                    <span class="detail-label">Clientes</span>
+                    <span class="detail-value">${t.clientes}</span>
+                </div>
+                <div class="cliente-detail">
+                    <span class="detail-label">Faturamento</span>
+                    <span class="detail-value">
+                        ${new Intl.NumberFormat('pt-BR', {
+                            style: 'currency',
+                            currency: 'BRL'
+                        }).format(t.faturamento)}
+                    </span>
+                </div>
+            </div>
+        </div>
+    `).join('');
+
+    return `
+        <div id="tributacao-view" class="tributacao-view" style="display:none;">
+            ${resumoHTML}
+            ${itensHTML}
+        </div>
+    `;
+}
+
+function renderTributacaoViewComparacaoColaborador(clientes, colaborador) {
+
+    if (!clientes || clientes.length === 0) {
+        return `
+            <div class="cliente-item empty">
+                <div class="cliente-header">
+                    <div class="cliente-nome">Nenhuma tributação encontrada</div>
+                </div>
+            </div>
+        `;
+    }
+
+    // 🔹 Agrupar por Tributação
+    const tributacaoMap = new Map();
+
+    clientes.forEach(cliente => {
+        const trib = cliente.tributação || 'Não Informada';
+
+        if (!tributacaoMap.has(trib)) {
+            tributacaoMap.set(trib, {
+                nome: trib,
+                clientes: 0,
+                faturamentoTotal: 0,
+                complexidades: { 'A': 0, 'B': 0, 'C': 0, 'D': 0 }
+            });
+        }
+
+        const tribData = tributacaoMap.get(trib);
+        tribData.clientes++;
+        tribData.faturamentoTotal += cliente.faturamento || 0;
+
+        if (tribData.complexidades[cliente.complexidade] !== undefined) {
+            tribData.complexidades[cliente.complexidade]++;
+        }
+    });
+
+    const tributacoes = Array.from(tributacaoMap.values());
+
+    // 🔹 Cards de tributação (espelho de grupos)
+    const tributacoesHTML = tributacoes.map(trib => {
+        const faturamentoFormatado = new Intl.NumberFormat('pt-BR', {
+            style: 'currency',
+            currency: 'BRL',
+            minimumFractionDigits: 2
+        }).format(trib.faturamentoTotal);
+
+        return `
+            <div class="cliente-item grupo-item">
+                <div class="cliente-header">
+                    <div class="cliente-nome">${trib.nome}</div>
+                    <div class="grupo-stats">
+                        <span class="complexidade-count complexidade-A">A: ${trib.complexidades['A']}</span>
+                        <span class="complexidade-count complexidade-B">B: ${trib.complexidades['B']}</span>
+                        <span class="complexidade-count complexidade-C">C: ${trib.complexidades['C']}</span>
+                        <span class="complexidade-count complexidade-D">D: ${trib.complexidades['D']}</span>
+                    </div>
+                </div>
+                <div class="cliente-details">
+                    <div class="cliente-detail">
+                        <span class="detail-label">Clientes</span>
+                        <span class="detail-value">${trib.clientes}</span>
+                    </div>
+                    <div class="cliente-detail">
+                        <span class="detail-label">Faturamento</span>
+                        <span class="detail-value">${faturamentoFormatado}</span>
+                    </div>
+                </div>
+            </div>
+        `;
+    }).join('');
+
+    // 🔹 Resumo
+    const totalTributacoes = tributacoes.length;
+    const totalClientes = clientes.length;
+    const totalFaturamento = clientes.reduce((s, c) => s + (c.faturamento || 0), 0);
+
+    const resumoHTML = `
+        <div class="cliente-item resumo-total">
+            <div class="cliente-header">
+                <div class="cliente-nome">RESUMO TRIBUTAÇÃO</div>
+            </div>
+            <div class="cliente-details">
+                <div class="cliente-detail">
+                    <span class="detail-label">Tipos</span>
+                    <span class="detail-value highlight">${totalTributacoes}</span>
+                </div>
+                <div class="cliente-detail">
+                    <span class="detail-label">Clientes</span>
+                    <span class="detail-value">${totalClientes}</span>
+                </div>
+                <div class="cliente-detail">
+                    <span class="detail-label">Faturamento Total</span>
+                    <span class="detail-value highlight">
+                        ${new Intl.NumberFormat('pt-BR', {
+                            style: 'currency',
+                            currency: 'BRL'
+                        }).format(totalFaturamento)}
+                    </span>
+                </div>
+            </div>
+        </div>
+    `;
+
+    return `
+        <div class="tributacao-colaborador">
+            ${resumoHTML}
+            ${tributacoesHTML}
+        </div>
+    `;
+}
 
 /**
  * Renderiza a view de clientes para um colaborador específico na comparação
@@ -1440,140 +1662,6 @@ function renderGruposViewComparacao(grupos) {
         </div>
     `;
 }
-
-function renderTributacaoViewComparacaoColaborador(clientes, colaborador) {
-    if (clientes.length === 0) {
-        return `
-            <div class="cliente-item empty">
-                <div class="cliente-header">
-                    <div class="cliente-nome">Nenhuma tributação encontrada</div>
-                </div>
-            </div>
-        `;
-    }
-
-    // Agrupar por tributação
-    const tributacaoMap = new Map();
-
-    clientes.forEach(cliente => {
-        const trib = cliente.tributação || 'Não Informada';
-
-        if (!tributacaoMap.has(trib)) {
-            tributacaoMap.set(trib, {
-                nome: trib,
-                totalClientes: 0,
-                faturamentoTotal: 0,
-                complexidades: { A: 0, B: 0, C: 0, D: 0 }
-            });
-        }
-
-        const data = tributacaoMap.get(trib);
-        data.totalClientes++;
-        data.faturamentoTotal += cliente.faturamento;
-
-        if (data.complexidades[cliente.complexidade] !== undefined) {
-            data.complexidades[cliente.complexidade]++;
-        }
-    });
-
-    const tributacoes = Array.from(tributacaoMap.values());
-
-    const tributacaoHTML = tributacoes.map(trib => `
-        <div class="cliente-item grupo-item">
-            <div class="cliente-header">
-                <div class="cliente-nome">${trib.nome}</div>
-                <div class="grupo-stats">
-                    <span class="complexidade-count complexidade-A">A: ${trib.complexidades.A}</span>
-                    <span class="complexidade-count complexidade-B">B: ${trib.complexidades.B}</span>
-                    <span class="complexidade-count complexidade-C">C: ${trib.complexidades.C}</span>
-                    <span class="complexidade-count complexidade-D">D: ${trib.complexidades.D}</span>
-                </div>
-            </div>
-            <div class="cliente-details">
-                <div class="cliente-detail">
-                    <span class="detail-label">Clientes</span>
-                    <span class="detail-value">${trib.totalClientes}</span>
-                </div>
-                <div class="cliente-detail">
-                    <span class="detail-label">Faturamento</span>
-                    <span class="detail-value">
-                        ${new Intl.NumberFormat('pt-BR', {
-                            style: 'currency',
-                            currency: 'BRL'
-                        }).format(trib.faturamentoTotal)}
-                    </span>
-                </div>
-            </div>
-        </div>
-    `).join('');
-
-    const totalClientes = clientes.length;
-    const totalFaturamento = clientes.reduce((s, c) => s + c.faturamento, 0);
-
-    const resumoHTML = `
-        <div class="cliente-item resumo-total">
-            <div class="cliente-header">
-                <div class="cliente-nome">RESUMO TRIBUTAÇÃO</div>
-            </div>
-            <div class="cliente-details">
-                <div class="cliente-detail">
-                    <span class="detail-label">Tipos</span>
-                    <span class="detail-value highlight">${tributacoes.length}</span>
-                </div>
-                <div class="cliente-detail">
-                    <span class="detail-label">Clientes</span>
-                    <span class="detail-value">${totalClientes}</span>
-                </div>
-                <div class="cliente-detail">
-                    <span class="detail-label">Faturamento</span>
-                    <span class="detail-value highlight">
-                        ${new Intl.NumberFormat('pt-BR', {
-                            style: 'currency',
-                            currency: 'BRL'
-                        }).format(totalFaturamento)}
-                    </span>
-                </div>
-            </div>
-        </div>
-    `;
-
-    return `
-        <div class="grupos-colaborador">
-            ${resumoHTML}
-            ${tributacaoHTML}
-        </div>
-    `;
-}
-
-function renderTributacaoViewComparacao(colaborador1, clientes1, colaborador2, clientes2) {
-    return `
-        <div id="tributacao-view" class="grupos-view comparativo" style="display: none;">
-            <div class="comparacao-container">
-                
-                <div class="colaborador-coluna">
-                    <div class="colaborador-header" style="background: ${roleStripColorMap[colaborador1.CARGO] || roleStripColorMap['Outros']}">
-                        <h3>${colaborador1.NOME} - Tributação</h3>
-                    </div>
-                    <div class="grupos-colaborador">
-                        ${renderTributacaoViewComparacaoColaborador(clientes1, colaborador1)}
-                    </div>
-                </div>
-
-                <div class="colaborador-coluna">
-                    <div class="colaborador-header" style="background: ${roleStripColorMap[colaborador2.CARGO] || roleStripColorMap['Outros']}">
-                        <h3>${colaborador2.NOME} - Tributação</h3>
-                    </div>
-                    <div class="grupos-colaborador">
-                        ${renderTributacaoViewComparacaoColaborador(clientes2, colaborador2)}
-                    </div>
-                </div>
-
-            </div>
-        </div>
-    `;
-}
-
-
 /**
  * Obtém os clientes de um colaborador com filtro de competência
  */
