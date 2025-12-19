@@ -1085,7 +1085,7 @@ function renderClientesViewComparacaoColaborador(clientes, colaborador) {
                     </div>
                     <div class="cliente-detail">
                         <span class="detail-label">Tributação</span>
-                        <span class="detail-value">${cliente.segmento}</span>
+                        <span class="detail-value">${cliente.tributação}</span>
                     </div>
                 </div>
             </div>
@@ -1587,7 +1587,7 @@ function getClientesDoColaboradorComFiltro(nomeColaborador, competenciaFiltro) {
     }).map(cliente => ({
         nome: cliente.Cliente || 'Cliente sem nome',
         grupo: cliente.Grupo || 'N/A',
-        segmento: cliente.Segmento || 'N/A',
+        tributação: cliente.Tributação || 'N/A',
         competencia: cliente.Competência || 'N/A',
         complexidade: cliente.Complexidade || 'N/A',
         faturamento: parseCurrency(cliente.Faturamento || 0)
@@ -2858,7 +2858,7 @@ function renderClientesView(clientes) {
                     </div>
                     <div class="cliente-detail">
                         <span class="detail-label">Tributação</span>
-                        <span class="detail-value">${cliente.segmento}</span>
+                        <span class="detail-value">${cliente.tributação}</span>
                     </div>
                 </div>
             </div>
@@ -3160,7 +3160,7 @@ function getClientesDoColaborador(nomeColaborador) {
     }).map(cliente => ({
         nome: cliente.Cliente || 'Cliente sem nome',
         grupo: cliente.Grupo || 'N/A',
-        segmento: cliente.Segmento || 'N/A',
+        tributação: cliente.Tributação || 'N/A',
         competencia: cliente.Competência || 'N/A',
         complexidade: cliente.Complexidade || 'N/A',
         faturamento: parseCurrency(cliente.Faturamento || 0)
